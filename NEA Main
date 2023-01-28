@@ -65,37 +65,77 @@ class mosquito(pygame.sprite.Sprite):
         
 
 
-WIDTH = 600
-HEIGHT = 400
-
-pygame.init()
-screen = pygame.display.set_mode([WIDTH, HEIGHT])
-
-container = pygame.sprite.Group()
-
-for i in range(10):
-    x = np.random.randint(0, WIDTH + 1)
-    y = np.random.randint(0, HEIGHT + 1)
-    vel = np.random.rand(2) * 2 - 1
-    np.random.rand(2)
-    susceptible_mosquito = mosquito(x, y, WIDTH, HEIGHT, color = susceptible_people_col, velocity = vel )
-    container.add(susceptible_mosquito)
-
-T = 2000000000
-
-clock = pygame.time.Clock()
-
-for i in range(T):
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            break
+class Simulation:
+    def __init__(self, width = 600, height = 480):
+        self.WIDTH = width
+        self.HEIGHT = height
+        
+        
+        #A container class to hold and manage multiple Sprite objects in this case to manage each category of person and mosquito
+        self.susceptible_people_container = pygame.sprite.Group()
+        self.semi_immune_people_container = pygame.sprite.Group()
+        self.infected_people_container = pygame.sprite.Group()
+        self.dead_container = pygame.sprite.Group()
+        self.immune_container = pygame.sprite.Group()
+        self.male_container = pygame.sprite.Group()
+        self.susceptible_mosquito_container = pygame.sprite.Group()
+        self.infected_mosquito_container = pygame.sprite.Group()
+        self.all_container = pygame.sprite.Group()
+        
+        
+        self.n_susceptible_mosquito = 20
+        self.n_infected_mosquito = 1
+        self.T = 1000
+        
+    
+    def start(self):
+        
+        self.N = self.n_susceptible_mosquito + self.n_infected_mosquito
+        
+        pygame.init()
+        screen = pygame.display.set_mode([self.WIDTH, self.HEIGHT])
+        
+        for i in range(self.n_susceptible_mosquito):
+            x = np.random.randint(0, self.WIDTH + 1)
+            y = np.random.randint(0, self.HEIGHT + 1)
+            vel = np.random.rand(2) * 2 - 1
+            np.random.rand(2)
             
-        container.update()
+            susceptible_mosquito = mosquito(x, y, self.WIDTH, self.HEIGHT, color = susceptible_people_col, velocity = vel )
+            
+            self.susceptible_mosquito_container.add(susceptible_mosquito)
+            self.all_container.add(susceptible_mosquito)
+            
+        for i in range(self.n_infected_mosquito):
+            x = np.random.randint(0, self.WIDTH + 1)
+            y = np.random.randint(0, self.HEIGHT + 1)
+            vel = np.random.rand(2) * 2 - 1
+            np.random.rand(2)
+            
+            infected_mosquito = mosquito(x, y, self.WIDTH, self.HEIGHT, color = infected_mosquitoes_col, velocity = vel )
+            
+            self.susceptible_mosquito_container.add(infected_mosquito)
+            self.all_container.add(infected_mosquito)
         
-        screen.fill(background_col)
+        clock = pygame.time.Clock()
         
-        container.draw(screen)
-        
-        pygame.display.flip()
-        
-        clock.tick(60)
+        T = 2000000000
+        for i in range(T):
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    break
+                    
+                self.all_container.update()
+                
+                screen.fill(background_col)
+                
+                self.all_container.draw(screen)
+                
+                pygame.display.flip()
+                
+                clock.tick(60)
+                
+
+if __name__ == "__main__":
+    covid = Simulation()
+    covid.start()
