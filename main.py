@@ -13,11 +13,12 @@ immune_col = (255, 165, 0)
 male_mosq_col = (0, 100, 255) #BLUE
 susceptible_mosquito_col = (50, 150, 50) #GREEN
 infected_mosquitoes_col = (255,0,0) #red
-background_col = (41, 70, 90) #Blue/grey
+background_col = (112, 74, 81)  #Blue/grey
+inner_surface_col = (44, 100, 101) #grey
 
 
 class mosquito(pygame.sprite.Sprite):
-    def __init__(self,x,y,width,height,color= dead_col,radius=2,velocity=[0, 0],randomize=False,): 
+    def __init__(self,x,y,width,height,color= dead_col,radius=2,velocity=[0, 0],randomize=False): 
         
         super().__init__()
         
@@ -38,6 +39,12 @@ class mosquito(pygame.sprite.Sprite):
         
         self.WIDTH = width
         self.HEIGHT = height
+        
+        self.sim_width = 800
+        self.sim_height = 800
+        
+        self.window_xpos = 80
+        self.window_ypos = 80
     
     def update(self):
         #Assigns a speed to the position vector
@@ -46,20 +53,21 @@ class mosquito(pygame.sprite.Sprite):
         dx, dy = self.pos
 
         # Periodic boundary conditions to prevent objects going off the screen
-        #if the person goes off screen it puts them on the other side
-        if dx < 0:
-            self.pos[0] = self.WIDTH 
-            dx = self.WIDTH
-        if dx > self.WIDTH:
-            self.pos[0] = 0
-            dx = 0
-        if dy < 0:
-            self.pos[1] = self.HEIGHT
-            dy = self.HEIGHT
-        if dy > self.HEIGHT:
-            self.pos[1] = 0
-            dy = 0
-
+        # if the person goes off screen it puts them on the other side
+        
+        if dx < self.window_xpos:                               #left boarder
+            self.pos[0] = self.window_xpos + self.sim_width
+            dx = self.window_xpos + self.sim_width
+        if dx > self.window_xpos + self.sim_width:              #right boarder
+            self.pos[0] = self.window_xpos
+            dx = self.window_xpos
+        if dy < self.window_ypos:                               #top boarder
+            self.pos[1] = self.window_ypos + self.sim_height
+            dy = self.window_ypos + self.sim_height
+        if dy > self.window_ypos + self.sim_height:             #bottom boarder
+            self.pos[1] = self.window_ypos
+            dy = self.window_ypos
+        
         self.rect.x = dx
         self.rect.y = dy
         
@@ -68,9 +76,13 @@ class mosquito(pygame.sprite.Sprite):
 
 
 class Simulation:
-    def __init__(self, width = 1600, height = 900):
+    def __init__(self, width = 1600, height = 900, sim_width = 800, sim_height = 800):
         self.WIDTH = width
         self.HEIGHT = height
+        self.sim_width = sim_height
+        self.sim_height = sim_width
+        
+        self.inner_surface = pygame.Surface((sim_width, sim_height))
         
         
         #A container class to hold and manage multiple Sprite objects in this case to manage each category of person and mosquito
@@ -85,7 +97,7 @@ class Simulation:
         self.all_container = pygame.sprite.Group()
         
         #number of each mosquito
-        self.n_susceptible_mosquito = 2000
+        self.n_susceptible_mosquito = 200
         self.n_infected_mosquito = 50
         
         
@@ -122,9 +134,6 @@ class Simulation:
             self.infected_mosquito_container.add(guy)
             
             self.all_container.add(guy)
-            
-            
-            
         
         clock = pygame.time.Clock()
         
@@ -134,10 +143,13 @@ class Simulation:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     T = False
-                
+            
+            
             self.all_container.update()
             
             screen.fill(background_col)
+            self.inner_surface.fill(inner_surface_col)
+            screen.blit(self.inner_surface, (80, 80)) # blit the inner surface to the main window surface
             
             #detects collision between infected mosq and suscpetible mosq and moves it to the infected container
             collision_group = pygame.sprite.groupcollide(self.susceptible_mosquito_container,self.infected_mosquito_container,True,False)
@@ -157,3 +169,6 @@ if __name__ == "__main__":
     malaria.start()
     
 
+
+
+pygame.display.update()
