@@ -2,19 +2,19 @@ import pygame, sys
 import numpy as np
 import random
 import pygame.math as math
-
+import pygame.font
 
 #Colours
 susceptible_people_col = (211,211,211)
 semi_immune_col = (144, 238, 144) #light green PKA WHITE
-infected_people_col = (255, 0, 0) #infected people
+infected_people_col = (0, 255, 0) #infected people
 dead_col = (0, 0, 0) #black
 immune_col = (255, 165, 0)
 male_mosq_col = (0, 100, 255) #BLUE
 susceptible_mosquito_col = (50, 150, 50) #GREEN
 infected_mosquitoes_col = (255,0,0) #red
-background_col = (112, 74, 81)  #Blue/grey
-inner_surface_col = (44, 100, 101) #grey
+background_col = (81, 54, 59)  #Blue/grey
+inner_surface_col = (127, 84, 92) #grey
 
 
 class mosquito(pygame.sprite.Sprite):
@@ -24,7 +24,7 @@ class mosquito(pygame.sprite.Sprite):
         
         #Creates Mosquitoes
         self.image = pygame.Surface([radius * 2, radius * 2]) 
-        self.image.fill(background_col)
+        self.image.fill(inner_surface_col)
         pygame.draw.circle(self.image, color, (radius, radius), radius)
 
         #Mosquito location assinged used a vector
@@ -71,9 +71,36 @@ class mosquito(pygame.sprite.Sprite):
         self.rect.x = dx
         self.rect.y = dy
         
-    def infect(self, color, radius = 2):
-        return mosquito(self.rect.x,self.rect.y,self.WIDTH,self.HEIGHT,color=color,velocity=self.vel)
+    def infect_person(self, color, radius = 5):
+        self.kill()
+        return person(self.rect.x,self.rect.y,self.WIDTH,self.HEIGHT,color=color,velocity=self.vel, radius = radius)
+    
+    def spawn_mosquitoes(self):
+        x = np.random.randint(0, self.WIDTH + 1)
+        y = np.random.randint(0, self.HEIGHT + 1)
+        vel = np.random.rand(2) * 2 - 1
+        np.random.rand(2)
+        
+        infected_mosquito = mosquito(x, y, self.WIDTH, self.HEIGHT, color = infected_mosquitoes_col, velocity = vel )
+        
+        self.infected_mosquito_container.add(infected_mosquito)
+        
+        self.all_container.add(infected_mosquito)
 
+
+class person(mosquito, pygame.sprite.Sprite):
+    def infect_mosquito(self, color, radius = 2):
+        return mosquito(self.rect.x,self.rect.y,self.WIDTH,self.HEIGHT,color=color,velocity=self.vel,radius = radius)
+    
+    def spawn_people(self):
+        x = np.random.randint(0, self.sim_width + 1)
+        y = np.random.randint(0, self.sim_height + 1)
+        vel = np.random.rand(2) * 2 - 1
+        np.random.rand(2)
+        susceptible_people = person(x, y, self.sim_width, self.sim_height, color = susceptible_people_col, velocity = vel, radius = 5)
+        
+        self.susceptible_people_container.add(susceptible_people)
+        self.all_container.add(susceptible_people)
 
 class Simulation:
     def __init__(self, width = 1600, height = 900, sim_width = 800, sim_height = 800):
@@ -85,7 +112,22 @@ class Simulation:
         self.inner_surface = pygame.Surface((sim_width, sim_height))
         
         
+        pygame.font.init()
+        
+        font_file = "C:\\Users\\sufyo\\Desktop\\Modelling the Spread Of Malaria\\Anurati-Regular.otf"
+        
+        font = pygame.font.Font(font_file, 50)
+        # Render the text
+        self.text = font.render("Day in the Life of a Mosquito V3", True, (255, 255, 255))
+        # Get the rectangle of the text
+        self.text_rect = self.text.get_rect()
+        # Center the text in the window
+        self.text_rect.center = (self.WIDTH / 2, 30)
+        
+        
+        
         #A container class to hold and manage multiple Sprite objects in this case to manage each category of person and mosquito
+        #pygame.sprite.Group objects act as a hashmap to all objects in the group
         self.susceptible_people_container = pygame.sprite.Group()
         self.semi_immune_people_container = pygame.sprite.Group()
         self.infected_people_container = pygame.sprite.Group()
@@ -99,7 +141,7 @@ class Simulation:
         #number of each mosquito
         self.n_susceptible_mosquito = 200
         self.n_infected_mosquito = 50
-        
+        self.n_susceptible_people = 200
         
     def start(self):
         
@@ -109,31 +151,15 @@ class Simulation:
         #initiliases pygame window and display
         pygame.init()
         screen = pygame.display.set_mode([self.WIDTH, self.HEIGHT])
-        
-        #main loop which moves the susceptible mosquitoes on screen
-        for i in range(self.n_susceptible_mosquito):
-            x = np.random.randint(0, self.WIDTH + 1)
-            y = np.random.randint(0, self.HEIGHT + 1)
-            vel = np.random.rand(2) * 2 - 1
-            np.random.rand(2)
-            guy = mosquito(x, y, self.WIDTH, self.HEIGHT, color = susceptible_people_col, velocity = vel )
-            
-            self.susceptible_mosquito_container.add(guy)
-            self.all_container.add(guy)
-        
+        pygame.display.set_caption("Malaria Sim")
+
+        #loop which moves the susceptible mosquitoes on screen
+        for i in range(self.n_susceptible_people):
+            person.spawn_people(self)
         
         #loop which moves non infected mosquitoes on screen
         for i in range(self.n_infected_mosquito):
-            x = np.random.randint(0, self.WIDTH + 1)
-            y = np.random.randint(0, self.HEIGHT + 1)
-            vel = np.random.rand(2) * 2 - 1
-            np.random.rand(2)
-            
-            guy = mosquito(x, y, self.WIDTH, self.HEIGHT, color = infected_mosquitoes_col, velocity = vel )
-            
-            self.infected_mosquito_container.add(guy)
-            
-            self.all_container.add(guy)
+            mosquito.spawn_mosquitoes(self)
         
         clock = pygame.time.Clock()
         
@@ -151,15 +177,21 @@ class Simulation:
             self.inner_surface.fill(inner_surface_col)
             screen.blit(self.inner_surface, (80, 80)) # blit the inner surface to the main window surface
             
-            #detects collision between infected mosq and suscpetible mosq and moves it to the infected container
-            collision_group = pygame.sprite.groupcollide(self.susceptible_mosquito_container,self.infected_mosquito_container,True,False)
+            #detects collision between infected mosq and suscpetible person and moves it to the infected container
+            collision_group = pygame.sprite.groupcollide(self.susceptible_people_container,self.infected_mosquito_container,False,False)
             
-            #Uses collision_group to make susceptible mosquitoes infected.
-            for guy in collision_group:
-                new_mosquito = guy.infect(infected_mosquitoes_col)
-                self.infected_mosquito_container.add(new_mosquito)
-                self.all_container.add(new_mosquito)
+            #Uses collision_group to make susceptible people infected by mosquitoes
+            for susceptible_people, infected_mosquitoes in collision_group.items():
                 
+                incidence = random.uniform(0,1)
+                if incidence < 0.005:
+                    infected_people = susceptible_people.infect_person(infected_people_col, radius = 5)
+                    self.infected_people_container.add(infected_people)
+                    self.all_container.add(infected_people)
+                    
+            
+            screen.blit(self.text, self.text_rect)
+            
             self.all_container.draw(screen)
             clock.tick(60)
             pygame.display.flip()
