@@ -81,11 +81,12 @@ class mosquito(pygame.sprite.Sprite):
             self.cycles_to_death -= 1
 
             if self.cycles_to_death <= 0:
-                self.fatility = False
+                self.fatality_on = False
                 if self.mortality_rate > random.uniform(0,1):
                     self.kill()
                 else:
                     self.recovered = True
+                    print("recovered")
         
     def infect_person(self, color, radius = 5):
         return person(self.rect.x,self.rect.y,self.WIDTH,self.HEIGHT,color=color,velocity=self.vel, radius = radius)
@@ -107,7 +108,7 @@ class mosquito(pygame.sprite.Sprite):
         self.infected_mosquito_container.add(infected_mosquito)
         
         self.all_container.add(infected_mosquito)
-    def fatality(self,cycles_to_death=20, mortality_rate=0.2):
+    def fatality(self,cycles_to_death=20, mortality_rate=0.0001):
             self.fatality_on = True
             self.cycles_to_death = cycles_to_death
             self.mortality_rate = mortality_rate
@@ -146,7 +147,9 @@ class Simulation:
         
         pygame.font.init()
         
-        font_file = "/Users/suufff/Desktop/Main NEA/Modelling-the-Spread-Of-Malaria/Anurati-Regular.otf"
+        # font_file = "/Users/suufff/Desktop/Main NEA/Modelling-the-Spread-Of-Malaria/Anurati-Regular.otf"
+        
+        font_file = r"C:\Users\sufyo\Desktop\Modelling the Spread Of Malaria\Anurati-Regular.otf"
         
         font = pygame.font.Font(font_file, 50)
         # Render the text
@@ -222,7 +225,7 @@ class Simulation:
             for susceptible_people, infected_mosquitoes in collision_group.items():
                 
                 incidence = random.uniform(0,1)
-                if incidence < 0.015:
+                if incidence < 0.15:
                     infected_people = susceptible_people.infect_person(infected_people_col, radius = 5)
                     infected_people.vel *= -1
                     infected_people.fatality(self.cycles_to_death, self.mortality_rate)
@@ -233,7 +236,7 @@ class Simulation:
             
             for infected_person in self.infected_people_container:
                 if infected_person.recovered:
-                    recovered_person = infected_person.recover(immune_col)
+                    recovered_person = person.recover(self,immune_col)
                     self.immune_container.add(recovered_person)
                     self.all_container.add(recovered_person)
                     recovered.append(recovered_person)
