@@ -18,6 +18,10 @@ inner_surface_col = (127, 84, 92) #grey
 
 
 class mosquito(pygame.sprite.Sprite):
+    
+    '''
+    
+    '''
     def __init__(self,x,y,width,height,color= dead_col,radius=2,velocity=[0, 0],randomize=False): 
         
         super().__init__()
@@ -33,7 +37,7 @@ class mosquito(pygame.sprite.Sprite):
         self.vel = np.asarray(velocity, dtype=np.float64)
         
         
-        self.killswitch_on = False
+        self.fatality_on = False
         self.recovered = False
         self.randomize = randomize
         
@@ -50,6 +54,7 @@ class mosquito(pygame.sprite.Sprite):
         #Assigns a speed to the position vector
         self.pos += self.vel 
 
+        #Position vector
         dx, dy = self.pos
 
         # Periodic boundary conditions to prevent objects going off the screen
@@ -71,9 +76,25 @@ class mosquito(pygame.sprite.Sprite):
         self.rect.x = dx
         self.rect.y = dy
         
+        if self.fatality_on:
+            
+            self.cycles_to_death -= 1
+
+            if self.cycles_to_death <= 0:
+                self.fatility = False
+                if self.mortality_rate > random.uniform(0,1):
+                    self.kill()
+                else:
+                    self.recovered = True
+        
     def infect_person(self, color, radius = 5):
-        self.kill()
         return person(self.rect.x,self.rect.y,self.WIDTH,self.HEIGHT,color=color,velocity=self.vel, radius = radius)
+    
+    
+    
+    #kills people if the mortality rate is higher than a random float generated between 1 & 0
+    
+        
     
     def spawn_mosquitoes(self):
         x = np.random.randint(0, self.WIDTH + 1)
@@ -86,7 +107,10 @@ class mosquito(pygame.sprite.Sprite):
         self.infected_mosquito_container.add(infected_mosquito)
         
         self.all_container.add(infected_mosquito)
-
+    def fatality(self,cycles_to_death=20, mortality_rate=0.2):
+            self.fatality_on = True
+            self.cycles_to_death = cycles_to_death
+            self.mortality_rate = mortality_rate
 
 class person(mosquito, pygame.sprite.Sprite):
     def infect_mosquito(self, color, radius = 2):
@@ -101,6 +125,14 @@ class person(mosquito, pygame.sprite.Sprite):
         
         self.susceptible_people_container.add(susceptible_people)
         self.all_container.add(susceptible_people)
+        
+    def recover(self, color, radius = 5):
+        return person(self.rect.x,self.rect.y,self.WIDTH,self.HEIGHT,color=color,velocity=self.vel, radius = radius)
+    
+        
+
+
+
 
 class Simulation:
     def __init__(self, width = 1600, height = 900, sim_width = 800, sim_height = 800):
@@ -114,11 +146,11 @@ class Simulation:
         
         pygame.font.init()
         
-        font_file = "C:\\Users\\sufyo\\Desktop\\Modelling the Spread Of Malaria\\Anurati-Regular.otf"
+        font_file = "/Users/suufff/Desktop/Main NEA/Modelling-the-Spread-Of-Malaria/Anurati-Regular.otf"
         
         font = pygame.font.Font(font_file, 50)
         # Render the text
-        self.text = font.render("Day in the Life of a Mosquito V3", True, (255, 255, 255))
+        self.text = font.render("DAY I N  T H E   L I F E  O F   A  M O S Q U I T O", True, (255, 255, 255))
         # Get the rectangle of the text
         self.text_rect = self.text.get_rect()
         # Center the text in the window
@@ -138,10 +170,14 @@ class Simulation:
         self.infected_mosquito_container = pygame.sprite.Group()
         self.all_container = pygame.sprite.Group()
         
-        #number of each mosquito
+        #Variables bro
         self.n_susceptible_mosquito = 200
         self.n_infected_mosquito = 50
         self.n_susceptible_people = 200
+        self.n_infected_people = 100
+        self.cycles_to_death = 100
+        self.mortality_rate = 0.02
+        
         
     def start(self):
         
@@ -160,6 +196,8 @@ class Simulation:
         #loop which moves non infected mosquitoes on screen
         for i in range(self.n_infected_mosquito):
             mosquito.spawn_mosquitoes(self)
+        
+        
         
         clock = pygame.time.Clock()
         
@@ -184,11 +222,26 @@ class Simulation:
             for susceptible_people, infected_mosquitoes in collision_group.items():
                 
                 incidence = random.uniform(0,1)
-                if incidence < 0.005:
+                if incidence < 0.015:
                     infected_people = susceptible_people.infect_person(infected_people_col, radius = 5)
+                    infected_people.vel *= -1
+                    infected_people.fatality(self.cycles_to_death, self.mortality_rate)
                     self.infected_people_container.add(infected_people)
                     self.all_container.add(infected_people)
-                    
+            
+            recovered = []
+            
+            for infected_person in self.infected_people_container:
+                if infected_person.recovered:
+                    recovered_person = infected_person.recover(immune_col)
+                    self.immune_container.add(recovered_person)
+                    self.all_container.add(recovered_person)
+                    recovered.append(recovered_person)
+            
+            if len(recovered) > 0:
+                self.infected_mosquito_container.remove(*recovered)
+                self.all_container.remove(*recovered)
+                
             
             screen.blit(self.text, self.text_rect)
             
