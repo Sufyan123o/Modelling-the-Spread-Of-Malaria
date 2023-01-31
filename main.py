@@ -155,9 +155,7 @@ class Simulation:
         
         pygame.font.init()
         
-        font_file = "/Users/suufff/Desktop/Main NEA/Modelling-the-Spread-Of-Malaria/Anurati-Regular.otf"
-        
-        # font_file = r"C:\Users\sufyo\Desktop\Modelling the Spread Of Malaria\Anurati-Regular.otf"
+        font_file = "Anurati-Regular.otf"
         
         font = pygame.font.Font(font_file, 50)
         # Render the text
@@ -166,6 +164,12 @@ class Simulation:
         self.text_rect = self.text.get_rect()
         # Center the text in the window
         self.text_rect.center = (self.WIDTH / 2, 30)
+        
+        # load the icon image
+        icon = pygame.image.load("icon.png")
+
+        # set the icon for the game window
+        pygame.display.set_icon(icon)
         
         
         
@@ -233,13 +237,25 @@ class Simulation:
             #Uses collision_group to make susceptible people infected by mosquitoes
             for susceptible_people, infected_mosquitoes in collision_group.items():
                 
-                incidence = random.uniform(0,1)
-                if incidence < 0.15:
-                    infected_people = susceptible_people.infect_person(infected_people_col, radius = 5)
-                    infected_people.vel *= -1
-                    infected_people.fatality(self.cycles_to_death, self.mortality_rate)
-                    self.infected_people_container.add(infected_people)
-                    self.all_container.add(infected_people)
+                
+                if susceptible_people or infected_mosquitoes in self.immune_container:
+                    incidence = random.uniform(0,1)
+                    if incidence < 0.15:
+                        infected_people = susceptible_people.infect_person(infected_people_col, radius = 5)
+                        infected_people.vel *= -1
+                        infected_people.fatality(self.cycles_to_death, self.mortality_rate)
+                        self.infected_people_container.add(infected_people)
+                        self.all_container.add(infected_people)
+
+                
+                
+                # incidence = random.uniform(0,1)
+                # if incidence < 0.15:
+                #     infected_people = susceptible_people.infect_person(infected_people_col, radius = 5)
+                #     infected_people.vel *= -1
+                #     infected_people.fatality(self.cycles_to_death, self.mortality_rate)
+                #     self.infected_people_container.add(infected_people)
+                #     self.all_container.add(infected_people)
             
             recovered = []
             
