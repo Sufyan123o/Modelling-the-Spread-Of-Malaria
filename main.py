@@ -13,8 +13,8 @@ immune_col = (255, 165, 0)
 male_mosq_col = (0, 100, 255) #BLUE
 susceptible_mosquito_col = (50, 150, 50) #GREEN
 infected_mosquitoes_col = (255,0,0) #red
-background_col = (81, 54, 59)  #Blue/grey
-inner_surface_col = (127, 84, 92) #grey
+background_col = (25, 25, 34)  #Blue/grey
+inner_surface_col = (33, 33, 45	) #grey
 
 
 class mosquito(pygame.sprite.Sprite):
@@ -93,13 +93,12 @@ class mosquito(pygame.sprite.Sprite):
     
     
     
-    #kills people if the mortality rate is higher than a random float generated between 1 & 0
     
         
     
     def spawn_mosquitoes(self):
-        x = np.random.randint(0, self.WIDTH + 1)
-        y = np.random.randint(0, self.HEIGHT + 1)
+        x = np.random.randint(80, self.sim_width + 1)
+        y = np.random.randint(80, self.sim_height + 1)
         vel = np.random.rand(2) * 2 - 1
         np.random.rand(2)
         
@@ -118,8 +117,8 @@ class person(mosquito, pygame.sprite.Sprite):
         return mosquito(self.rect.x,self.rect.y,self.WIDTH,self.HEIGHT,color=color,velocity=self.vel,radius = radius)
     
     def spawn_people(self):
-        x = np.random.randint(0, self.sim_width + 1)
-        y = np.random.randint(0, self.sim_height + 1)
+        x = np.random.randint(80, self.sim_width + 1)
+        y = np.random.randint(80, self.sim_height + 1)
         vel = np.random.rand(2) * 2 - 1
         np.random.rand(2)
         susceptible_people = person(x, y, self.sim_width, self.sim_height, color = susceptible_people_col, velocity = vel, radius = 5)
@@ -127,9 +126,18 @@ class person(mosquito, pygame.sprite.Sprite):
         self.susceptible_people_container.add(susceptible_people)
         self.all_container.add(susceptible_people)
         
-    def recover(self, color, radius = 5):
-        return person(self.rect.x,self.rect.y,self.WIDTH,self.HEIGHT,color=color,velocity=self.vel, radius = radius)
-    
+    def recover(self, simulation, color, radius = 5):
+        x = np.random.randint(0, self.sim_width)
+        y = np.random.randint(0, self.sim_height)
+
+        recovered_person = person(self.rect.x, self.rect.y, self.WIDTH, self.HEIGHT, color=color, velocity=self.vel, radius = radius)
+        simulation.all_container.add(recovered_person)
+        simulation.immune_container.add(recovered_person)
+        
+        # self.infected_people_container.remove(self)
+        
+        return recovered_person
+
         
 
 
@@ -147,13 +155,13 @@ class Simulation:
         
         pygame.font.init()
         
-        # font_file = "/Users/suufff/Desktop/Main NEA/Modelling-the-Spread-Of-Malaria/Anurati-Regular.otf"
+        font_file = "/Users/suufff/Desktop/Main NEA/Modelling-the-Spread-Of-Malaria/Anurati-Regular.otf"
         
-        font_file = r"C:\Users\sufyo\Desktop\Modelling the Spread Of Malaria\Anurati-Regular.otf"
+        # font_file = r"C:\Users\sufyo\Desktop\Modelling the Spread Of Malaria\Anurati-Regular.otf"
         
         font = pygame.font.Font(font_file, 50)
         # Render the text
-        self.text = font.render("DAY I N  T H E   L I F E  O F   A  M O S Q U I T O", True, (255, 255, 255))
+        self.text = font.render("M O D E L L I N G  M A L A R I A", True, (255, 255, 255))
         # Get the rectangle of the text
         self.text_rect = self.text.get_rect()
         # Center the text in the window
@@ -167,19 +175,20 @@ class Simulation:
         self.semi_immune_people_container = pygame.sprite.Group()
         self.infected_people_container = pygame.sprite.Group()
         self.dead_container = pygame.sprite.Group()
-        self.immune_container = pygame.sprite.Group()
         self.male_container = pygame.sprite.Group()
+        self.immune_container = pygame.sprite.Group()
         self.susceptible_mosquito_container = pygame.sprite.Group()
         self.infected_mosquito_container = pygame.sprite.Group()
         self.all_container = pygame.sprite.Group()
+        
         
         #Variables bro
         self.n_susceptible_mosquito = 200
         self.n_infected_mosquito = 50
         self.n_susceptible_people = 200
         self.n_infected_people = 100
-        self.cycles_to_death = 100
-        self.mortality_rate = 0.02
+        self.cycles_to_death = 1000
+        self.mortality_rate = 0.2
         
         
     def start(self):
@@ -234,12 +243,18 @@ class Simulation:
             
             recovered = []
             
+            
             for infected_person in self.infected_people_container:
                 if infected_person.recovered:
-                    recovered_person = person.recover(self,immune_col)
+                    recovered_person = infected_person.recover(self, immune_col)
                     self.immune_container.add(recovered_person)
                     self.all_container.add(recovered_person)
-                    recovered.append(recovered_person)
+                    self.infected_people_container.remove(infected_person)
+                    self.all_container.remove(infected_people)
+                    self.immune_container.draw(screen)
+            
+            self.all_container.draw(screen)
+            
             
             if len(recovered) > 0:
                 self.infected_mosquito_container.remove(*recovered)
@@ -248,7 +263,6 @@ class Simulation:
             
             screen.blit(self.text, self.text_rect)
             
-            self.all_container.draw(screen)
             clock.tick(60)
             pygame.display.flip()
 
