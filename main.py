@@ -49,6 +49,8 @@ class mosquito(pygame.sprite.Sprite):
         
         self.window_xpos = 80
         self.window_ypos = 80
+        
+        
     
     def update(self):
         #Assigns a speed to the position vector
@@ -78,7 +80,7 @@ class mosquito(pygame.sprite.Sprite):
         
         if self.fatality_on:
             
-            self.cycles_to_death -= 1
+            self.cycles_to_death -= 5
 
             if self.cycles_to_death <= 0:
                 self.fatality_on = False
@@ -86,11 +88,13 @@ class mosquito(pygame.sprite.Sprite):
                     self.kill()
                 else:
                     self.recovered = True
-                    print("recovered")
         
     def infect_person(self, color, radius = 5):
-        return person(self.rect.x,self.rect.y,self.WIDTH,self.HEIGHT,color=color,velocity=self.vel, radius = radius)
-    
+        self.kill()
+        infected_person = person(self.rect.x,self.rect.y,self.WIDTH,self.HEIGHT,color=color,velocity=self.vel, radius = radius)
+        simulation = Simulation()
+        simulation.all_container.add(infected_person)
+        return infected_person
     
     
     
@@ -127,6 +131,8 @@ class person(mosquito, pygame.sprite.Sprite):
         self.all_container.add(susceptible_people)
         
     def recover(self, simulation, color, radius = 5):
+        self.kill()
+        
         x = np.random.randint(0, self.sim_width)
         y = np.random.randint(0, self.sim_height)
 
@@ -185,6 +191,7 @@ class Simulation:
         self.infected_mosquito_container = pygame.sprite.Group()
         self.all_container = pygame.sprite.Group()
         
+        all_container = self.all_container
         
         #Variables bro
         self.n_susceptible_mosquito = 200
@@ -246,29 +253,24 @@ class Simulation:
                         infected_people.fatality(self.cycles_to_death, self.mortality_rate)
                         self.infected_people_container.add(infected_people)
                         self.all_container.add(infected_people)
-
-                
-                
-                # incidence = random.uniform(0,1)
-                # if incidence < 0.15:
-                #     infected_people = susceptible_people.infect_person(infected_people_col, radius = 5)
-                #     infected_people.vel *= -1
-                #     infected_people.fatality(self.cycles_to_death, self.mortality_rate)
-                #     self.infected_people_container.add(infected_people)
-                #     self.all_container.add(infected_people)
             
             recovered = []
             
+            # for susceptible_people in self.susceptible_people_container:
+                # self.all_container.remove(susceptible_people)
             
             for infected_person in self.infected_people_container:
                 if infected_person.recovered:
+                    
+                    self.infected_people_container.remove(infected_person)
+                    self.all_container.remove(infected_people)
+                    
                     recovered_person = infected_person.recover(self, immune_col)
                     self.immune_container.add(recovered_person)
                     self.all_container.add(recovered_person)
-                    self.infected_people_container.remove(infected_person)
-                    self.all_container.remove(infected_people)
-                    self.immune_container.draw(screen)
-            
+                    
+                    # self.immune_container.draw(screen)
+                
             self.all_container.draw(screen)
             
             
