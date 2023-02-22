@@ -3,6 +3,7 @@ import numpy as np
 import random
 import pygame.math as math
 import pygame.font
+from pygame import math
 
 #Colours
 susceptible_people_col = (211,211,211)
@@ -52,6 +53,8 @@ class mosquito(pygame.sprite.Sprite):
         self.window_ypos = 80
         
         
+        
+        
     
     def update(self, radius = 5):
         #Assigns a speed to the position vector
@@ -59,7 +62,6 @@ class mosquito(pygame.sprite.Sprite):
 
         #Position vector
         dx, dy = self.pos
-
         # Periodic boundary conditions to prevent objects going off the screen
         # if the person goes off screen it puts them on the other side
         
@@ -81,7 +83,7 @@ class mosquito(pygame.sprite.Sprite):
         
         if self.fatality_on:
             
-            self.cycles_to_death -= 1
+            self.cycles_to_death -= 10
 
             if self.cycles_to_death <= 0:
                 self.fatality_on = False
@@ -138,7 +140,7 @@ class mosquito(pygame.sprite.Sprite):
         
         self.all_container.add(suscpetible_mosquito)
     
-    def fatality(self,cycles_to_death=2000, mortality_rate=0.2):
+    def fatality(self,cycles_to_death=1000, mortality_rate=0.2):
             self.fatality_on = True
             self.cycles_to_death = cycles_to_death
             self.mortality_rate = mortality_rate
@@ -163,7 +165,6 @@ class person(mosquito, pygame.sprite.Sprite):
     #     return mosquito(self.rect.x,self.rect.y,self.WIDTH,self.HEIGHT,color=color,velocity=self.vel,radius = radius)
     
     
-        
     
     def spawn_people(self):
         x = np.random.randint(80, self.sim_width + 1)
@@ -197,9 +198,6 @@ class person(mosquito, pygame.sprite.Sprite):
         
         return dead_person
 
-
-
-
 class Simulation:
     def __init__(self, width = 1600, height = 900, sim_width = 800, sim_height = 800):
         self.WIDTH = width
@@ -208,7 +206,6 @@ class Simulation:
         self.sim_height = sim_width
         
         self.inner_surface = pygame.Surface((sim_width, sim_height))
-        
         
         pygame.font.init()
         
@@ -227,8 +224,6 @@ class Simulation:
 
         # set the icon for the game window
         pygame.display.set_icon(icon)
-        
-        
         
         #A container class to hold and manage multiple Sprite objects in this case to manage each category of person and mosquito
         #pygame.sprite.Group objects act as a hashmap to all objects in the group
@@ -285,7 +280,6 @@ class Simulation:
                 if event.type == pygame.QUIT:
                     T = False
             
-            
             self.all_container.update()
             
             screen.fill(background_col)
@@ -307,8 +301,8 @@ class Simulation:
                         infected_people.fatality(self.cycles_to_death, self.mortality_rate)
                         self.infected_people_container.add(infected_people)
                         self.all_container.add(infected_people)
-        
-        
+            
+            #Uses Collision group to make susceptible mosquitoes infected by susceptible people.
             collision_group = pygame.sprite.groupcollide(self.susceptible_mosquito_container,self.infected_people_container,False,False)
             
             for susceptible_mosquitoes, infected_people in collision_group.items():
@@ -318,46 +312,59 @@ class Simulation:
                     incidence = random.uniform(0,1)
                     if incidence < 10:
                         infected_mosquitoes = susceptible_mosquitoes.infect_mosquito(infected_mosquitoes_col, radius = 2)
-                        # infected_people.vel *= -1
-                        # infected_people.fatality(self.cycles_to_death, self.mortality_rate)
+                        
                         self.infected_mosquito_container.add(infected_mosquitoes)
                         self.all_container.add(infected_mosquitoes)
             
             
-            recovered = []
-            
-            
+            to_remove = []
+            to_recover = []
+
             for infected_person in self.infected_people_container:
                 if infected_person.recovered:
-                    
-                    self.infected_people_container.remove(infected_person)
-                    self.all_container.remove(infected_people)
-                    
-                    recovered_person = infected_person.recover(self, immune_col)
-                    self.immune_container.add(recovered_person)
-                    self.all_container.add(recovered_person)
-                    
-                    # self.immune_container.draw(screen)
+                    to_remove.append(infected_person)
+                    to_recover.append(infected_person)
                 elif infected_person.dead:
-                    if infected_person in self.infected_people_container:
-                        self.infected_people_container.remove(infected_person)
-                    self.all_container.remove(infected_people)
-                    
+                    to_remove.append(infected_person)
                     dead_person = infected_person.kill_person(self, dead_col, vel=0)
                     self.dead_container.add(dead_person)
-                    # self.all_container.add(dead_person)
 
-                
+            for people in to_remove:
+                self.infected_people_container.remove(people)
+                self.all_container.remove(people)
+
+            for people in to_recover:
+                recovered_person = people.recover(self, immune_col)
+                self.immune_container.add(recovered_person)
+                self.all_container.add(recovered_person)
+        
+            #Draws All Objects on the Screen
             self.all_container.draw(screen)
-            # self.dead_container.draw(screen)
             
-            if len(recovered) > 0:
-                self.infected_mosquito_container.remove(*recovered)
-                self.all_container.remove(*recovered)
+            if len(to_recover) > 0:
+                self.infected_mosquito_container.remove(*to_recover)
+                self.all_container.remove(*to_recover)
                 
+            # Create font object
+            font = pygame.font.SysFont(None, 30)
             
+            # Create list of text surfaces
+            text_surfaces = [
+                font.render("Susceptible: " + str(len(self.susceptible_people_container)), True, (susceptible_people_col)),
+                font.render("Immune: " + str(len(self.immune_container)), True, (immune_col)),
+                font.render("Infected: " + str(len(self.infected_people_container)), True, (infected_people_col)),
+                font.render("Dead: " + str(len(self.dead_container)), True, (dead_col)),
+                font.render("Male Mosquitoes: " + str(len(self.male_container)), True, (male_mosq_col)),
+                font.render("Susceptible Mosquitoes: " + str(len(self.susceptible_mosquito_container)), True, (susceptible_mosquito_col)),
+                font.render("Infected Mosquitoes: " + str(len(self.infected_mosquito_container)), True, (infected_mosquitoes_col)),
+            ]
+            text_surfaces.reverse()
+            # Blit text surfaces onto screen surface
+            for i, text_surface in enumerate(text_surfaces):
+                screen.blit(text_surface, (self.sim_width + 100, self.HEIGHT - self.sim_height + 160 - i*30))
+
             screen.blit(self.text, self.text_rect)
-            
+
             clock.tick(60)
             pygame.display.flip()
 
