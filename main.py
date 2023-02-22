@@ -27,7 +27,7 @@ class mosquito(pygame.sprite.Sprite):
         super().__init__()
         
         #Creates Mosquitoes
-        self.image = pygame.Surface([radius * 2, radius * 2]) 
+        self.image = pygame.Surface([radius * 2, radius * 2]).convert_alpha()
         self.image.fill(inner_surface_col)
         pygame.draw.circle(self.image, color, (radius, radius), radius)
 
@@ -81,7 +81,7 @@ class mosquito(pygame.sprite.Sprite):
         
         if self.fatality_on:
             
-            self.cycles_to_death -= 2
+            self.cycles_to_death -= 1
 
             if self.cycles_to_death <= 0:
                 self.fatality_on = False
@@ -107,21 +107,63 @@ class mosquito(pygame.sprite.Sprite):
         x = np.random.randint(80, self.sim_width + 1)
         y = np.random.randint(80, self.sim_height + 1)
         vel = np.random.rand(2) * 2 - 1
-        np.random.rand(2)
         
         infected_mosquito = mosquito(x, y, self.WIDTH, self.HEIGHT, color = infected_mosquitoes_col, velocity = vel )
         
         self.infected_mosquito_container.add(infected_mosquito)
         
         self.all_container.add(infected_mosquito)
-    def fatality(self,cycles_to_death=20, mortality_rate=0.2):
+    
+    def spawn_male_mosquitoes(self):
+        x = np.random.randint(80, self.sim_width + 1)
+        y = np.random.randint(80, self.sim_height + 1)
+        vel = np.random.rand(2) * 2 - 1
+        np.random.rand(2)
+        
+        male_mosquito = mosquito(x, y, self.WIDTH, self.HEIGHT, color = male_mosq_col, velocity = vel )
+        
+        self.male_container.add(male_mosquito)
+        
+        self.all_container.add(male_mosquito)
+        
+    def spawn_susceptible_mosquitoes(self):
+        x = np.random.randint(80, self.sim_width + 1)
+        y = np.random.randint(80, self.sim_height + 1)
+        vel = np.random.rand(2) * 2 - 1
+        np.random.rand(2)
+        
+        suscpetible_mosquito = mosquito(x, y, self.WIDTH, self.HEIGHT, color = susceptible_mosquito_col, velocity = vel )
+        
+        self.susceptible_mosquito_container.add(suscpetible_mosquito)
+        
+        self.all_container.add(suscpetible_mosquito)
+    
+    def fatality(self,cycles_to_death=2000, mortality_rate=0.2):
             self.fatality_on = True
             self.cycles_to_death = cycles_to_death
             self.mortality_rate = mortality_rate
+            
+    def infect_mosquito(self, color, radius = 2):
+        self.kill()
+        x = np.random.randint(80, self.sim_width + 1)
+        y = np.random.randint(80, self.sim_height + 1)
+        vel = np.random.rand(2) * 2 - 1
+        
+        infected_mosquito = person(self.rect.x, self.rect.y, self.WIDTH, self.HEIGHT, color=color, velocity=self.vel, radius = 2)
+
+        # infected_mosquito = mosquito(x, y, self.WIDTH, self.HEIGHT, color = infected_mosquitoes_col, velocity = vel )
+        simulation = Simulation()
+        # Simulation.infected_mosquito_container.add(infected_mosquito)
+        simulation.all_container.add(infected_mosquito)
+        
+        return infected_mosquito
 
 class person(mosquito, pygame.sprite.Sprite):
-    def infect_mosquito(self, color, radius = 2):
-        return mosquito(self.rect.x,self.rect.y,self.WIDTH,self.HEIGHT,color=color,velocity=self.vel,radius = radius)
+    # def infect_mosquito(self, color, radius = 2):
+    #     return mosquito(self.rect.x,self.rect.y,self.WIDTH,self.HEIGHT,color=color,velocity=self.vel,radius = radius)
+    
+    
+        
     
     def spawn_people(self):
         x = np.random.randint(80, self.sim_width + 1)
@@ -136,8 +178,8 @@ class person(mosquito, pygame.sprite.Sprite):
     def recover(self, simulation, color, radius = 5):
         self.kill()
         
-        x = np.random.randint(0, self.sim_width)
-        y = np.random.randint(0, self.sim_height)
+        # x = np.random.randint(0, self.sim_width)
+        # y = np.random.randint(0, self.sim_height)
         
         recovered_person = person(self.rect.x, self.rect.y, self.WIDTH, self.HEIGHT, color=color, velocity=self.vel, radius = radius)
         simulation.all_container.add(recovered_person)
@@ -147,12 +189,6 @@ class person(mosquito, pygame.sprite.Sprite):
         return recovered_person
 
     def kill_person(self, simulation, color, vel, radius = 5):
-        
-        self.kill()
-        
-        x = np.random.randint(0, self.sim_width)
-        y = np.random.randint(0, self.sim_height)
-        
         self.vel = 0
         dead_person = person(self.rect.x, self.rect.y, self.WIDTH, self.HEIGHT, color=color, velocity=self.vel, radius = radius)
         simulation.all_container.add(dead_person)
@@ -208,8 +244,9 @@ class Simulation:
         
         
         #Variables
-        self.n_susceptible_mosquito = 200
+        self.n_susceptible_mosquito = 80
         self.n_infected_mosquito = 50
+        self.n_male_mosquito = 15
         self.n_susceptible_people = 200
         self.n_infected_people = 100
         self.cycles_to_death = 1000
@@ -234,8 +271,11 @@ class Simulation:
         for i in range(self.n_infected_mosquito):
             mosquito.spawn_mosquitoes(self)
         
+        for i in range(self.n_male_mosquito):
+            mosquito.spawn_male_mosquitoes(self)
         
-        
+        for i in range(self.n_susceptible_mosquito):
+            mosquito.spawn_susceptible_mosquitoes(self)
         clock = pygame.time.Clock()
         
         T = True
@@ -259,7 +299,7 @@ class Simulation:
             for susceptible_people, infected_mosquitoes in collision_group.items():
                 
                 
-                if susceptible_people or infected_mosquitoes in self.immune_container:
+                if susceptible_people or infected_mosquitoes not in self.immune_container:
                     incidence = random.uniform(0,1)
                     if incidence < 10:
                         infected_people = susceptible_people.infect_person(infected_people_col, radius = 5)
@@ -267,6 +307,22 @@ class Simulation:
                         infected_people.fatality(self.cycles_to_death, self.mortality_rate)
                         self.infected_people_container.add(infected_people)
                         self.all_container.add(infected_people)
+        
+        
+            collision_group = pygame.sprite.groupcollide(self.susceptible_mosquito_container,self.infected_people_container,False,False)
+            
+            for susceptible_mosquitoes, infected_people in collision_group.items():
+                
+                
+                if susceptible_mosquitoes or infected_people in self.immune_container:
+                    incidence = random.uniform(0,1)
+                    if incidence < 10:
+                        infected_mosquitoes = susceptible_mosquitoes.infect_mosquito(infected_mosquitoes_col, radius = 2)
+                        # infected_people.vel *= -1
+                        # infected_people.fatality(self.cycles_to_death, self.mortality_rate)
+                        self.infected_mosquito_container.add(infected_mosquitoes)
+                        self.all_container.add(infected_mosquitoes)
+            
             
             recovered = []
             
@@ -289,7 +345,7 @@ class Simulation:
                     
                     dead_person = infected_person.kill_person(self, dead_col, vel=0)
                     self.dead_container.add(dead_person)
-                    self.all_container.add(dead_person)
+                    # self.all_container.add(dead_person)
 
                 
             self.all_container.draw(screen)
