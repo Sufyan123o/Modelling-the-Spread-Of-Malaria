@@ -1,0 +1,82 @@
+# import networkx as nx
+# import matplotlib.pyplot as plt
+
+# # create a graph
+# G = nx.Graph()
+# G.add_edges_from([(1,2),(2,3),(3,4),(4,1),])
+
+# # draw the graph
+# nx.draw(G, with_labels=True)
+# plt.show()
+import pygame
+import matplotlib.pyplot as plt
+from PIL import Image
+from io import BytesIO
+import numpy as np
+from collections import deque
+import networkx as nx
+
+# initialize Pygame
+pygame.init()
+
+# set up the screen to match the Matplotlib figure size
+figsize = (5, 4)
+dpi = 100
+screen_width = int(figsize[0] * dpi)
+screen_height = int(figsize[1] * dpi)
+screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption('Real-time graph')
+
+# set up Matplotlib figure and axes
+fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+
+# initialize data structures
+xdata = deque(maxlen=100)    # deque as a queue
+ydata = deque(maxlen=100)    # deque as a queue
+
+G = nx.Graph()              # networkx graph
+
+# start the Pygame loop
+while True:
+    # handle Pygame events
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            quit()
+
+    # generate new data
+    new_x = np.random.rand()
+    new_y = np.random.rand()
+
+    # update the data structures
+    xdata.append(new_x)
+    ydata.append(new_y)
+    G.add_node(len(xdata))
+    if len(xdata) > 1:
+        G.add_edge(len(xdata)-1, len(xdata))
+
+    # update the graph
+    plt.cla()   # clear the previous plot
+    pos = nx.spring_layout(G)
+    nx.draw(G, pos, node_color='b', node_size=50, ax=ax)
+    plt.title('Real-time graph')
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
+
+    # plot the data as a scatter plot
+    plt.scatter(xdata, ydata, c='r', s=5)
+
+    # update the Matplotlib figure
+    fig.canvas.draw()
+
+    # convert the Matplotlib figure to a Pygame surface
+    buf = BytesIO()
+    fig.savefig(buf, format='png')
+    buf.seek(0)
+    img = Image.open(buf)
+    pygame_surface = pygame.image.fromstring(img.tobytes(), img.size, img.mode)
+
+    screen.blit(pygame_surface, (0, 0))
+
+    # update the Pygame display
+    pygame.display.flip()

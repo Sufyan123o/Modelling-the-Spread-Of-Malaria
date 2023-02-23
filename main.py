@@ -102,9 +102,6 @@ class mosquito(pygame.sprite.Sprite):
         return infected_person
     
     
-    
-        
-    
     def spawn_mosquitoes(self):
         x = np.random.randint(80, self.sim_width + 1)
         y = np.random.randint(80, self.sim_height + 1)
@@ -161,11 +158,6 @@ class mosquito(pygame.sprite.Sprite):
         return infected_mosquito
 
 class person(mosquito, pygame.sprite.Sprite):
-    # def infect_mosquito(self, color, radius = 2):
-    #     return mosquito(self.rect.x,self.rect.y,self.WIDTH,self.HEIGHT,color=color,velocity=self.vel,radius = radius)
-    
-    
-    
     def spawn_people(self):
         x = np.random.randint(80, self.sim_width + 1)
         y = np.random.randint(80, self.sim_height + 1)
