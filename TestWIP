@@ -1,0 +1,98 @@
+import pygame
+import numpy as np
+import matplotlib.pyplot as plt
+import random
+
+
+class RealTimeGraph:
+    def __init__(self, figsize=(5, 4), dpi=100):
+        # initialize Pygame
+        pygame.init()
+
+        # set up the screen to match the Matplotlib figure size
+        self.screen_width = int(figsize[0] * dpi)
+        self.screen_height = int(figsize[1] * dpi)
+        self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
+        pygame.display.set_caption('Real-time graph')
+
+        # set up Matplotlib figure and axes
+        self.fig, self.ax = plt.subplots(figsize=figsize, dpi=dpi)
+
+        # create a plot_surface array with the dimensions of the Pygame surface
+        self.plot_surface = np.zeros((self.screen_height, self.screen_width, 3), dtype=np.uint8)
+
+        # initialize data structures
+        self.xdata = []
+        self.ydata = []
+        self.data_hash = {}  # hash table
+        self.tree = None     # binary search tree
+
+    def handle_events(self):
+        # handle Pygame events
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+    def generate_data(self):
+        # generate new data
+        new_x = random.random()
+        new_y = random.random()
+
+        # update the data structures
+        self.xdata.append(new_x)
+        self.ydata.append(new_y)
+        self.data_hash[len(self.xdata)-1] = (new_x, new_y)
+
+        # update the tree
+        class Node:
+            def __init__(self, x, y):
+                self.x = x
+                self.y = y
+                self.left = None
+                self.right = None
+        
+        def insert(node, x, y):
+            if node is None:
+                return Node(x, y)
+            if x < node.x:
+                node.left = insert(node.left, x, y)
+            else:
+                node.right = insert(node.right, x, y)
+            return node
+
+        self.tree = insert(self.tree, new_x, new_y)
+
+    def update_graph(self):
+        # update the Matplotlib figure
+        self.ax.clear()   # clear the previous plot
+        self.ax.plot(self.xdata, self.ydata, c='r')
+        self.ax.set_title('Real-time graph')
+        self.ax.set_xlim(0, 1)
+        self.ax.set_ylim(0, 1)
+
+        # update the Matplotlib figure
+        self.fig.canvas.draw()
+
+        # copy the Matplotlib figure onto the Pygame surface
+        self.plot_surface = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)
+        self.plot_surface = self.plot_surface.reshape((self.screen_height, self.screen_width, 3))
+        self.plot_surface = np.rot90(self.plot_surface, 1)   # rotate counterclockwise by 90 degrees
+        self.plot_surface = np.flipud(self.plot_surface)   # flip the surface vertically
+        pygame_surface = pygame.surfarray.make_surface(self.plot_surface)
+        self.screen.blit(pygame_surface, (0, 0))
+
+        # update the Pygame display
+        pygame.display.update()
+
+    def run(self):
+        # start the Pygame loop
+        while True:
+            self.handle_events()
+            self.generate_data()
+            self.update_graph()
+
+
+if __name__ == '__main__':
+    graph = RealTimeGraph()
+    graph.run()

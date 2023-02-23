@@ -1,9 +1,10 @@
 import pygame, sys
 import numpy as np
 import random
-import pygame.math as math
+import pygame.math
 import pygame.font
 from pygame import math
+import matplotlib.pyplot as plt
 
 #Colours
 susceptible_people_col = (211,211,211)
@@ -190,6 +191,97 @@ class person(mosquito, pygame.sprite.Sprite):
         
         return dead_person
 
+
+class RealTimeGraph:
+    def __init__(self, figsize=(5, 4), dpi=100):
+        # initialize Pygame
+        pygame.init()
+
+        # set up the screen to match the Matplotlib figure size
+        self.screen_width = int(figsize[0] * dpi)
+        self.screen_height = int(figsize[1] * dpi)
+        self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
+        pygame.display.set_caption('Real-time graph')
+
+        # set up Matplotlib figure and axes
+        self.fig, self.ax = plt.subplots(figsize=figsize, dpi=dpi)
+
+        # create a plot_surface array with the dimensions of the Pygame surface
+        self.plot_surface = np.zeros((self.screen_height, self.screen_width, 3), dtype=np.uint8)
+
+        # initialize data structures
+        self.xdata = []
+        self.ydata = []
+        self.data_hash = {}  # hash table
+        self.tree = None     # binary search tree
+
+    def handle_events(self):
+        # handle Pygame events
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+    def generate_data(self):
+        # generate new data
+        new_x = random.random()
+        new_y = random.random()
+
+        # update the data structures
+        self.xdata.append(new_x)
+        self.ydata.append(new_y)
+        self.data_hash[len(self.xdata)-1] = (new_x, new_y)
+
+        # update the tree
+        class Node:
+            def __init__(self, x, y):
+                self.x = x
+                self.y = y
+                self.left = None
+                self.right = None
+        
+        def insert(node, x, y):
+            if node is None:
+                return Node(x, y)
+            if x < node.x:
+                node.left = insert(node.left, x, y)
+            else:
+                node.right = insert(node.right, x, y)
+            return node
+
+        self.tree = insert(self.tree, new_x, new_y)
+
+    def update_graph(self):
+        # update the Matplotlib figure
+        self.ax.clear()   # clear the previous plot
+        self.ax.plot(self.xdata, self.ydata, c='r')
+        self.ax.set_title('Real-time graph')
+        self.ax.set_xlim(0, 1)
+        self.ax.set_ylim(0, 1)
+
+        # update the Matplotlib figure
+        self.fig.canvas.draw()
+
+        # copy the Matplotlib figure onto the Pygame surface
+        self.plot_surface = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)
+        self.plot_surface = self.plot_surface.reshape((self.screen_height, self.screen_width, 3))
+        self.plot_surface = np.rot90(self.plot_surface, 1)   # rotate counterclockwise by 90 degrees
+        self.plot_surface = np.flipud(self.plot_surface)   # flip the surface vertically
+        pygame_surface = pygame.surfarray.make_surface(self.plot_surface)
+        self.screen.blit(pygame_surface, (0, 0))
+
+        # update the Pygame display
+        pygame.display.update()
+
+    def run(self):
+        pass
+        # start the Pygame loop
+        # while True:
+            # self.handle_events()
+            # self.generate_data()
+            # self.update_graph()
+
+
 class Simulation:
     def __init__(self, width = 1600, height = 900, sim_width = 800, sim_height = 800):
         self.WIDTH = width
@@ -239,6 +331,11 @@ class Simulation:
         self.cycles_to_death = 1000
         self.mortality_rate = 0.2
         
+        # create a surface to display both the simulation and the graph
+        self.screen = pygame.display.set_mode([self.WIDTH, self.HEIGHT])
+        self.graph_surface = pygame.Surface((self.WIDTH - self.sim_width - 100, self.HEIGHT - 100))
+        self.graph_surface_rect = self.graph_surface.get_rect()
+        self.graph_surface_rect.topleft = (self.sim_width + 100, 80)
         
     def start(self):
         
@@ -247,7 +344,7 @@ class Simulation:
         
         #initiliases pygame window and display
         pygame.init()
-        screen = pygame.display.set_mode([self.WIDTH, self.HEIGHT])
+        screen = self.screen
         pygame.display.set_caption("Malaria Sim")
 
         #loop which moves the susceptible mosquitoes on screen
@@ -271,6 +368,12 @@ class Simulation:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     T = False
+            
+            graph = RealTimeGraph()
+            graph.handle_events()
+            graph.generate_data()
+            graph.update_graph()
+            
             
             self.all_container.update()
             
@@ -354,17 +457,26 @@ class Simulation:
             # Blit text surfaces onto screen surface
             for i, text_surface in enumerate(text_surfaces):
                 screen.blit(text_surface, (self.sim_width + 100, self.HEIGHT - self.sim_height + 160 - i*30))
-
+            pygame.display.gl_set_attribute(pygame.GL_ACCELERATED_VISUAL, 1)
             screen.blit(self.text, self.text_rect)
-
+            # screen.blit(RealTimeGraph.graph_surface, (0,0))
+            # update the graph
+            self.graph_surface.fill((255, 255, 255))  # clear the graph surface
+            self.screen.blit(self.graph_surface, self.graph_surface_rect)  # draw the graph surface on the screen
+            pygame.display.update()  # update the display
             clock.tick(60)
+            
             pygame.display.flip()
+
 
 if __name__ == "__main__":
     malaria = Simulation()
     malaria.start()
+    graph = RealTimeGraph()
+    graph.run()
     
-
+# if __name__ == '__main__':
+#     graph.run()
 
 
 pygame.display.update()
