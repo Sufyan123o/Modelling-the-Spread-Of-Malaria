@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 susceptible_people_col = (211,211,211)
 semi_immune_col = (144, 238, 144) #light green PKA WHITE
 infected_people_col = (0, 255, 0) #infected people
-dead_col = (0, 0, 0) #black
-immune_col = (255, 165, 0)
+dead_col = (56, 26, 20) #black
+immune_col = (255, 165, 0) 
 male_mosq_col = (0, 100, 255) #BLUE
 susceptible_mosquito_col = (50, 150, 50) #GREEN
 infected_mosquitoes_col = (255,0,0) #red
@@ -193,14 +193,14 @@ class person(mosquito, pygame.sprite.Sprite):
 
 
 class RealTimeGraph:
-    def __init__(self, figsize=(5, 4), dpi=100, fig = None):
+    def __init__(self, figsize=(5, 4), dpi=100, fig=None):
         # set up the screen to match the Matplotlib figure size
         self.screen_width = int(figsize[0] * dpi)
         self.screen_height = int(figsize[1] * dpi)
-        
+
         if fig is None:
-            self.fig, self.ax = plt.subplots(figsize=figsize, dpi=dpi, facecolor= "#21212D")
-            
+            self.fig, self.ax = plt.subplots(figsize=figsize, dpi=dpi, facecolor="#21212D")
+
         else:
             self.fig = fig
             self.ax = self.fig.gca()
@@ -212,18 +212,28 @@ class RealTimeGraph:
         # initialize data structures
         self.xdata = []
         self.ydata = []
+        self.ydata_susceptible = []
+        self.ydata_immune = []
+        self.ydata_infected = []
+        self.ydata_male = []
+        self.ydata_dead = []
+        self.ydata_infected_mosquitoes = []
         self.data_hash = {}  # hash table
-        self.tree = None     # binary search tree
-    
-    def generate_data(self):
-        # generate new data
-        new_x = random.random()
-        new_y = random.random()
+        self.tree = None  # binary search tree
+        
 
+    def generate_data(self, n_susceptible_people, n_immune_people, n_infected_people, n_male, n_dead_people, n_infected_mosquitoes):
         # update the data structures
-        self.xdata.append(new_x)
-        self.ydata.append(new_y)
-        self.data_hash[len(self.xdata)-1] = (new_x, new_y)
+        plt.rcParams['figure.max_open_warning'] = 1
+        self.xdata.append(len(self.xdata))
+        self.ydata_susceptible.append(n_susceptible_people)
+        self.ydata_immune.append(n_immune_people)
+        self.ydata_infected.append(n_infected_people)
+        self.ydata_male.append(n_male)
+        self.ydata_dead.append(n_dead_people)
+        self.ydata_infected_mosquitoes.append(n_infected_mosquitoes)
+
+        self.data_hash[len(self.xdata) - 1] = (len(self.xdata), n_susceptible_people, n_immune_people, n_infected_people, n_male, n_dead_people, n_infected_mosquitoes)
 
         # update the tree
         class Node:
@@ -232,7 +242,7 @@ class RealTimeGraph:
                 self.y = y
                 self.left = None
                 self.right = None
-        
+        sys.setrecursionlimit(100000) 
         def insert(node, x, y):
             if node is None:
                 return Node(x, y)
@@ -242,18 +252,30 @@ class RealTimeGraph:
                 node.right = insert(node.right, x, y)
             return node
 
-        self.tree = insert(self.tree, new_x, new_y)
+        self.tree = insert(self.tree, len(self.xdata), n_susceptible_people)
+        self.tree = insert(self.tree, len(self.xdata), n_immune_people)
+        self.tree = insert(self.tree, len(self.xdata), n_infected_people)
+        self.tree = insert(self.tree, len(self.xdata), n_male)
+        self.tree = insert(self.tree, len(self.xdata), n_dead_people)
+        self.tree = insert(self.tree, len(self.xdata), n_infected_mosquitoes)
 
     def update_graph(self):
         # update the Matplotlib figure
-        self.ax.clear()   # clear the previous plot
-        self.ax.plot(self.xdata, self.ydata, c='r', lw=2)
-        self.ax.set_title('Real-time graph', color = "white")
-        self.ax.set_xlim(0, 1)
-        self.ax.set_ylim(0, 1)
+        self.ax.clear()
+        self.ax.plot(self.xdata, self.ydata_susceptible, c='#d3d3d3', lw=2, label='Susceptible People')
+        self.ax.plot(self.xdata, self.ydata_immune, c='#ffa500', lw=2, label='Immune People')
+        self.ax.plot(self.xdata, self.ydata_infected, c='#90ee90', lw=2, label='Infected People')
+        self.ax.plot(self.xdata, self.ydata_male, c='#0064ff', lw=2, label='Male')
+        self.ax.plot(self.xdata, self.ydata_dead, c='#381a14', lw=2, label='Dead People')
+        self.ax.plot(self.xdata, self.ydata_infected_mosquitoes, c='#ff0000', lw=2, label='Infected Mosquitoes')
+        self.ax.set_title('Real-time graph', color="white")
+        self.ax.set_xlim(0, len(self.xdata))
+        self.ax.set_ylim(0, max(max(self.ydata_susceptible, self.ydata_immune, self.ydata_infected, self.ydata_male, self.ydata_dead, self.ydata_infected_mosquitoes)) + 10)
         self.ax.tick_params(axis='both', colors='white')
-        self.ax.set_xlabel('Population', color='white')
-        self.ax.set_ylabel('Time', color='white')
+        self.ax.set_xlabel('Time', color='white')
+        self.ax.set_ylabel('Number of People/Mosquitoes', color='white')
+        self.ax.legend()
+
 
         # update the Matplotlib figure
         self.fig.canvas.draw()
@@ -261,19 +283,15 @@ class RealTimeGraph:
         # copy the Matplotlib figure onto the Pygame surface
         self.plot_surface = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)
         self.plot_surface = self.plot_surface.reshape((self.screen_height, self.screen_width, 3))
-        self.plot_surface = np.rot90(self.plot_surface, 1)   # rotate counterclockwise by 90 degrees
-        self.plot_surface = np.flipud(self.plot_surface)   # flip the surface vertically
+        self.plot_surface = np.rot90(self.plot_surface, 1)  # rotate counterclockwise by 90 degrees
+        self.plot_surface = np.flipud(self.plot_surface)  # flip the surface vertically
 
         # update the Pygame display
         pygame.display.update()
 
     def run(self):
         pass
-        # start the Pygame loop
-        # while True:
-            # self.handle_events()
-            # self.generate_data()
-            # self.update_graph()
+
 
 
 class Simulation:
@@ -443,14 +461,15 @@ class Simulation:
                 font.render("Infected: " + str(len(self.infected_people_container)), True, (infected_people_col)),
                 font.render("Dead: " + str(len(self.dead_container)), True, (dead_col)),
                 font.render("Male Mosquitoes: " + str(len(self.male_container)), True, (male_mosq_col)),
-                font.render("Susceptible Mosquitoes: " + str(len(self.susceptible_mosquito_container)), True, (susceptible_mosquito_col)),
+                font.render("Susceptible Mosquitoes: " + str(len(self.dead_container)), True, (susceptible_mosquito_col)),
                 font.render("Infected Mosquitoes: " + str(len(self.infected_mosquito_container)), True, (infected_mosquitoes_col)),
             ]
             text_surfaces.reverse()
             
             
             # update the real-time graph
-            self.graph.generate_data()
+            self.graph.generate_data(len(self.susceptible_people_container), len(self.immune_container), len(self.infected_people_container),
+                                     len(self.male_container),len(self.dead_container), len(self.infected_mosquito_container))
             self.graph.update_graph()
             self.graph_surface.fill((255, 255, 255))  # clear the graph surface
             self.graph_surface.blit(pygame.surfarray.make_surface(self.graph.plot_surface), (0, 0))  # draw the graph on the graph surface
@@ -479,8 +498,7 @@ if __name__ == "__main__":
     graph = RealTimeGraph()
     graph.run()
     
-# if __name__ == '__main__':
-#     graph.run()
+
 
 
 pygame.display.update()
