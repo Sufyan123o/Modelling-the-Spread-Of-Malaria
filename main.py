@@ -195,33 +195,25 @@ class person(mosquito, pygame.sprite.Sprite):
 class RealTimeGraph:
     def __init__(self, figsize=(5, 4), dpi=100):
         # initialize Pygame
-        pygame.init()
+        # pygame.init()
 
         # set up the screen to match the Matplotlib figure size
         self.screen_width = int(figsize[0] * dpi)
         self.screen_height = int(figsize[1] * dpi)
-        self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
-        pygame.display.set_caption('Real-time graph')
-
+        
         # set up Matplotlib figure and axes
-        self.fig, self.ax = plt.subplots(figsize=figsize, dpi=dpi)
+        self.fig, self.ax = plt.subplots(figsize=figsize, dpi=dpi, facecolor='white')
+
 
         # create a plot_surface array with the dimensions of the Pygame surface
-        self.plot_surface = np.zeros((self.screen_height, self.screen_width, 3), dtype=np.uint8)
+        self.plot_surface = np.zeros((self.screen_height, self.screen_width, 4), dtype=np.uint8)
 
         # initialize data structures
         self.xdata = []
         self.ydata = []
         self.data_hash = {}  # hash table
         self.tree = None     # binary search tree
-
-    def handle_events(self):
-        # handle Pygame events
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                quit()
-
+    
     def generate_data(self):
         # generate new data
         new_x = random.random()
@@ -254,7 +246,7 @@ class RealTimeGraph:
     def update_graph(self):
         # update the Matplotlib figure
         self.ax.clear()   # clear the previous plot
-        self.ax.plot(self.xdata, self.ydata, c='r')
+        self.ax.plot(self.xdata, self.ydata, c='r', lw=2)
         self.ax.set_title('Real-time graph')
         self.ax.set_xlim(0, 1)
         self.ax.set_ylim(0, 1)
@@ -267,8 +259,8 @@ class RealTimeGraph:
         self.plot_surface = self.plot_surface.reshape((self.screen_height, self.screen_width, 3))
         self.plot_surface = np.rot90(self.plot_surface, 1)   # rotate counterclockwise by 90 degrees
         self.plot_surface = np.flipud(self.plot_surface)   # flip the surface vertically
-        pygame_surface = pygame.surfarray.make_surface(self.plot_surface)
-        self.screen.blit(pygame_surface, (0, 0))
+        # pygame_surface = pygame.surfarray.make_surface(self.plot_surface)
+        # self.screen.blit(pygame_surface, (0, 0))
 
         # update the Pygame display
         pygame.display.update()
@@ -337,6 +329,9 @@ class Simulation:
         self.graph_surface_rect = self.graph_surface.get_rect()
         self.graph_surface_rect.topleft = (self.sim_width + 100, 80)
         
+        # initialize the real-time graph
+        self.graph = RealTimeGraph(figsize=(self.graph_surface.get_width() / 100, self.graph_surface.get_height() / 100))
+    
     def start(self):
         
         #calc total population
@@ -369,10 +364,7 @@ class Simulation:
                 if event.type == pygame.QUIT:
                     T = False
             
-            graph = RealTimeGraph()
-            graph.handle_events()
-            graph.generate_data()
-            graph.update_graph()
+            
             
             
             self.all_container.update()
@@ -432,6 +424,7 @@ class Simulation:
                 recovered_person = people.recover(self, immune_col)
                 self.immune_container.add(recovered_person)
                 self.all_container.add(recovered_person)
+            self.screen.blit(self.inner_surface, (80, 80))
         
             #Draws All Objects on the Screen
             self.all_container.draw(screen)
@@ -454,14 +447,25 @@ class Simulation:
                 font.render("Infected Mosquitoes: " + str(len(self.infected_mosquito_container)), True, (infected_mosquitoes_col)),
             ]
             text_surfaces.reverse()
+            
+            
+            # update the real-time graph
+            self.graph.generate_data()
+            self.graph.update_graph()
+            self.graph_surface.fill((255, 255, 255))  # clear the graph surface
+            self.graph_surface.blit(pygame.surfarray.make_surface(self.graph.plot_surface), (0, 0))  # draw the graph on the graph surface
+            
             # Blit text surfaces onto screen surface
             for i, text_surface in enumerate(text_surfaces):
                 screen.blit(text_surface, (self.sim_width + 100, self.HEIGHT - self.sim_height + 160 - i*30))
-            pygame.display.gl_set_attribute(pygame.GL_ACCELERATED_VISUAL, 1)
             screen.blit(self.text, self.text_rect)
-            # screen.blit(RealTimeGraph.graph_surface, (0,0))
-            # update the graph
-            self.graph_surface.fill((255, 255, 255))  # clear the graph surface
+
+            # draw the simulation and the real-time graph on the same Pygame window
+            # self.screen.blit(self.graph_surface, self.graph_surface_rect)
+            pygame.display.update()
+
+            
+            
             self.screen.blit(self.graph_surface, self.graph_surface_rect)  # draw the graph surface on the screen
             pygame.display.update()  # update the display
             clock.tick(60)
