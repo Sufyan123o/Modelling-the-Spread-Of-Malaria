@@ -5,6 +5,7 @@ import pygame.math
 import pygame.font
 from pygame import math
 import matplotlib.pyplot as plt
+import time
 
 #Colours
 susceptible_people_col = (211,211,211)
@@ -52,6 +53,8 @@ class mosquito(pygame.sprite.Sprite):
         
         self.window_xpos = 80
         self.window_ypos = 80
+        
+        
         
         
         
@@ -145,12 +148,7 @@ class mosquito(pygame.sprite.Sprite):
             
     def infect_mosquito(self, color, radius = 2):
         self.kill()
-        x = np.random.randint(80, self.sim_width + 1)
-        y = np.random.randint(80, self.sim_height + 1)
-        vel = np.random.rand(2) * 2 - 1
-        
         infected_mosquito = person(self.rect.x, self.rect.y, self.WIDTH, self.HEIGHT, color=color, velocity=self.vel, radius = 2)
-
         # infected_mosquito = mosquito(x, y, self.WIDTH, self.HEIGHT, color = infected_mosquitoes_col, velocity = vel )
         simulation = Simulation()
         # Simulation.infected_mosquito_container.add(infected_mosquito)
@@ -171,9 +169,6 @@ class person(mosquito, pygame.sprite.Sprite):
         
     def recover(self, simulation, color, radius = 5):
         self.kill()
-        
-        # x = np.random.randint(0, self.sim_width)
-        # y = np.random.randint(0, self.sim_height)
         
         recovered_person = person(self.rect.x, self.rect.y, self.WIDTH, self.HEIGHT, color=color, velocity=self.vel, radius = radius)
         simulation.all_container.add(recovered_person)
@@ -200,7 +195,6 @@ class RealTimeGraph:
 
         if fig is None:
             self.fig, self.ax = plt.subplots(figsize=figsize, dpi=dpi, facecolor="#21212D")
-
         else:
             self.fig = fig
             self.ax = self.fig.gca()
@@ -221,7 +215,6 @@ class RealTimeGraph:
         self.data_hash = {}  # hash table
         self.tree = None  # binary search tree
         
-
     def generate_data(self, n_susceptible_people, n_immune_people, n_infected_people, n_male, n_dead_people, n_infected_mosquitoes):
         # update the data structures
         plt.rcParams['figure.max_open_warning'] = 1
@@ -251,7 +244,7 @@ class RealTimeGraph:
             else:
                 node.right = insert(node.right, x, y)
             return node
-
+        self.ax.clear()
         self.tree = insert(self.tree, len(self.xdata), n_susceptible_people)
         self.tree = insert(self.tree, len(self.xdata), n_immune_people)
         self.tree = insert(self.tree, len(self.xdata), n_infected_people)
@@ -261,6 +254,7 @@ class RealTimeGraph:
 
     def update_graph(self):
         # update the Matplotlib figure
+        
         self.ax.clear()
         self.ax.plot(self.xdata, self.ydata_susceptible, c='#d3d3d3', lw=2, label='Susceptible People')
         self.ax.plot(self.xdata, self.ydata_immune, c='#ffa500', lw=2, label='Immune People')
@@ -285,13 +279,6 @@ class RealTimeGraph:
         self.plot_surface = self.plot_surface.reshape((self.screen_height, self.screen_width, 3))
         self.plot_surface = np.rot90(self.plot_surface, 1)  # rotate counterclockwise by 90 degrees
         self.plot_surface = np.flipud(self.plot_surface)  # flip the surface vertically
-
-        # update the Pygame display
-        pygame.display.update()
-
-    def run(self):
-        pass
-
 
 
 class Simulation:
@@ -343,15 +330,15 @@ class Simulation:
         self.cycles_to_death = 1000
         self.mortality_rate = 0.2
         
-        # create a surface to display both the simulation and the graph
-        self.screen = pygame.display.set_mode([self.WIDTH, self.HEIGHT])
+        # # create a surface to display both the simulation and the graph
         self.graph_surface = pygame.Surface((self.WIDTH - self.sim_width - 100, self.HEIGHT - 300))
         self.graph_surface_rect = self.graph_surface.get_rect()
         self.graph_surface_rect.topleft = (self.sim_width + 100, 300)
         
         # initialize the real-time graph
         self.graph = RealTimeGraph(figsize=(self.graph_surface.get_width() / 100, self.graph_surface.get_height() / 100))
-    
+        
+        
     def start(self):
         
         #calc total population
@@ -359,7 +346,7 @@ class Simulation:
         
         #initiliases pygame window and display
         pygame.init()
-        screen = self.screen
+        screen = pygame.display.set_mode([self.WIDTH, self.HEIGHT])
         pygame.display.set_caption("Malaria Sim")
 
         #loop which moves the susceptible mosquitoes on screen
@@ -396,8 +383,6 @@ class Simulation:
             
             #Uses collision_group to make susceptible people infected by mosquitoes
             for susceptible_people, infected_mosquitoes in collision_group.items():
-                
-                
                 if susceptible_people or infected_mosquitoes not in self.immune_container:
                     incidence = random.uniform(0,1)
                     if incidence < 10:
@@ -411,13 +396,10 @@ class Simulation:
             collision_group = pygame.sprite.groupcollide(self.susceptible_mosquito_container,self.infected_people_container,False,False)
             
             for susceptible_mosquitoes, infected_people in collision_group.items():
-                
-                
                 if susceptible_mosquitoes or infected_people in self.immune_container:
                     incidence = random.uniform(0,1)
                     if incidence < 10:
                         infected_mosquitoes = susceptible_mosquitoes.infect_mosquito(infected_mosquitoes_col, radius = 2)
-                        
                         self.infected_mosquito_container.add(infected_mosquitoes)
                         self.all_container.add(infected_mosquitoes)
             
@@ -442,7 +424,6 @@ class Simulation:
                 recovered_person = people.recover(self, immune_col)
                 self.immune_container.add(recovered_person)
                 self.all_container.add(recovered_person)
-            self.screen.blit(self.inner_surface, (80, 80))
         
             #Draws All Objects on the Screen
             self.all_container.draw(screen)
@@ -480,25 +461,18 @@ class Simulation:
             screen.blit(self.text, self.text_rect)
 
             # draw the simulation and the real-time graph on the same Pygame window
-            # self.screen.blit(self.graph_surface, self.graph_surface_rect)
-            # pygame.display.update()
-
+            screen.blit(self.graph_surface, self.graph_surface_rect)
             
+            # self.screen.blit(self.graph_surface, self.graph_surface_rect)  # draw the graph surface on the screen
+            pygame.display.flip()
+        clock.tick(120)
             
-            self.screen.blit(self.graph_surface, self.graph_surface_rect)  # draw the graph surface on the screen
-            pygame.display.update()  # update the display
-            clock.tick(60)
-            
-            # pygame.display.flip()
 
 
 if __name__ == "__main__":
     malaria = Simulation()
     malaria.start()
-    graph = RealTimeGraph()
-    graph.run()
+    # graph = RealTimeGraph()
     
 
 
-
-pygame.display.update()
