@@ -198,6 +198,7 @@ class RealTimeGraph:
         else:
             self.fig = fig
             self.ax = self.fig.gca()
+            plt.close(self.fig)
         # set up Matplotlib figure and axes
 
         # create a plot_surface array with the dimensions of the Pygame surface
@@ -254,8 +255,6 @@ class RealTimeGraph:
 
     def update_graph(self):
         # update the Matplotlib figure
-        
-        self.ax.clear()
         self.ax.plot(self.xdata, self.ydata_susceptible, c='#d3d3d3', lw=2, label='Susceptible People')
         self.ax.plot(self.xdata, self.ydata_immune, c='#ffa500', lw=2, label='Immune People')
         self.ax.plot(self.xdata, self.ydata_infected, c='#90ee90', lw=2, label='Infected People')
@@ -268,17 +267,18 @@ class RealTimeGraph:
         self.ax.tick_params(axis='both', colors='white')
         self.ax.set_xlabel('Time', color='white')
         self.ax.set_ylabel('Number of People/Mosquitoes', color='white')
-        self.ax.legend()
-
+        # self.ax.legend()
 
         # update the Matplotlib figure
         self.fig.canvas.draw()
-
         # copy the Matplotlib figure onto the Pygame surface
         self.plot_surface = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype=np.uint8)
         self.plot_surface = self.plot_surface.reshape((self.screen_height, self.screen_width, 3))
         self.plot_surface = np.rot90(self.plot_surface, 1)  # rotate counterclockwise by 90 degrees
         self.plot_surface = np.flipud(self.plot_surface)  # flip the surface vertically
+        # close the previous figure
+        if len(plt.get_fignums()) > 1:
+            plt.close(plt.gcf())
 
 
 class Simulation:
@@ -334,10 +334,7 @@ class Simulation:
         self.graph_surface = pygame.Surface((self.WIDTH - self.sim_width - 100, self.HEIGHT - 300))
         self.graph_surface_rect = self.graph_surface.get_rect()
         self.graph_surface_rect.topleft = (self.sim_width + 100, 300)
-        
-        # initialize the real-time graph
         self.graph = RealTimeGraph(figsize=(self.graph_surface.get_width() / 100, self.graph_surface.get_height() / 100))
-        
         
     def start(self):
         
@@ -346,7 +343,9 @@ class Simulation:
         
         #initiliases pygame window and display
         pygame.init()
+
         screen = pygame.display.set_mode([self.WIDTH, self.HEIGHT])
+        
         pygame.display.set_caption("Malaria Sim")
 
         #loop which moves the susceptible mosquitoes on screen
@@ -462,10 +461,16 @@ class Simulation:
 
             # draw the simulation and the real-time graph on the same Pygame window
             screen.blit(self.graph_surface, self.graph_surface_rect)
+            frame_rate = "Frame Rate: " + str(int(clock.get_fps()))
+            frame_rate_surface = font.render(frame_rate, True, (255, 255, 255))
+            screen.blit(frame_rate_surface, (10, 10))
+
+            clock.tick(120)
             
             # self.screen.blit(self.graph_surface, self.graph_surface_rect)  # draw the graph surface on the screen
             pygame.display.flip()
-        clock.tick(120)
+        pygame.quit()
+        plt.show()
             
 
 
