@@ -216,22 +216,22 @@ class Graph:
             del self.graph[0]
 
         # Clear the graph surface
-        self.screen_graph.fill((255, 255, 255))
+        self.screen_graph.fill(inner_surface_col)
         
         # Draw the x-axis and y-axis
-        pygame.draw.line(self.screen_graph, (0, 0, 0), (50, 550), (750, 550), 2)
-        pygame.draw.line(self.screen_graph, (0, 0, 0), (50, 550), (50, 50), 2)
+        pygame.draw.line(self.screen_graph, (255, 255, 255), (50, 550), (750, 550), 2)
+        pygame.draw.line(self.screen_graph, (255, 255, 255), (50, 550), (50, 50), 2)
 
-        text = self.font.render('Time', True, (0, 0, 0))
+        text = self.font.render('Time', True, (255, 255, 255))
         self.screen_graph.blit(text, (400, 570))
 
-        text = self.font.render('Population', True, (0, 0, 0))
+        text = self.font.render('Population', True, (255, 255, 255))
         text = pygame.transform.rotate(text, 90)
         self.screen_graph.blit(text, (20, 300))
 
+        # Draw the graph
         for i in range(len(self.graph) - 1):
-            if i in self.graph and i+1 in self.graph:
-                pygame.draw.line(self.screen_graph, (0, 0, 0), self.graph[i], self.graph[i+1], 2)
+            pygame.draw.line(self.screen_graph, (255, 255, 255), self.graph[i], self.graph[i+1], 2)
 
 
 
