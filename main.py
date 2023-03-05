@@ -187,16 +187,30 @@ class person(mosquito, pygame.sprite.Sprite):
             self.pos += displacement * 2  # adjust the scaling factor to control the amount of displacement
 
 class MalariaModel:
-    def __init__(self, c_ve, beta, I_v, N_h):
-        self.c_ve = c_ve    #probability of infection
-        self.beta = beta    #Periodic Biting Rate
-        self.I_v = I_v      #Number of Infected People
-        self.N_h = N_h      #Total Population
+    def __init__(self, human_population, infected_population, immune_class, transmission_rate, probability_infection, biting_rate):
+        self.human_population = human_population
+        self.infected_population = infected_population #infected_population
+        self.immune_class = immune_class #Immune class
+        
+        self.transmission_rate = transmission_rate  # Transmission rate
+        
+        self.probability_infection = probability_infection # Probability of infection
+        self.biting_rate= biting_rate #Periodic biting Rate
+        
+
+    def human_to_mosquito(self):
+        
+        human_mosq = ((self.transmission_rate * self.biting_rate) * (self.infected_population / self.human_population)) + ((self.transmission_rate * self.biting_rate) * (self.infected_population / self.human_population))+ ((self.transmission_rate * self.biting_rate) * (self.immune_class / self.human_population))
+        print('Human to Mosquito',human_mosq)
+        return human_mosq
     
     def mosquito_to_nonimmune(self):
-        k_e = ((self.c_ve * self.beta)*(self.I_v / self.N_h))
-        return k_e
-
+        mosq_nonimmune = ((self.probability_infection * self.biting_rate)*(self.infected_population / self.human_population))
+        print('Mosquito to Human', mosq_nonimmune)
+        return mosq_nonimmune
+    
+    def mosquito_to_semi_immune(self):
+        pass
 
 
 class Graph:
@@ -404,12 +418,14 @@ class Simulation:
             #detects collision between infected mosq and suscpetible person and moves it to the infected container
             collision_group = pygame.sprite.groupcollide(self.susceptible_people_container,self.infected_mosquito_container,False,False)
             
-            model = MalariaModel(c_ve=0.5, beta=1, I_v=1000, N_h=5000)
+            malaria = MalariaModel(human_population = len(self.all_container), infected_population = len(self.infected_people_container), immune_class = len(self.immune_container),
+                                   transmission_rate = 1.2, probability_infection = 0.8, biting_rate = 1.2)
+
             
             #Uses collision_group to make susceptible people infected by mosquitoes
             for susceptible_people, infected_mosquitoes in collision_group.items():
                 if susceptible_people or infected_mosquitoes not in self.immune_container:
-                    incidence = model.mosquito_to_nonimmune()
+                    incidence = malaria.mosquito_to_nonimmune()
                     if incidence < 10:
                         infected_people = susceptible_people.infect_person(infected_people_col, radius = 5)
                         infected_people.vel *= -1
@@ -424,7 +440,7 @@ class Simulation:
             
             for susceptible_mosquitoes, infected_people in collision_group.items():
                 if susceptible_mosquitoes or infected_people in self.immune_container:
-                    incidence = random.uniform(0,1)
+                    incidence = malaria.human_to_mosquito()
                     if incidence < 10:
                         infected_mosquitoes = susceptible_mosquitoes.infect_mosquito(infected_mosquitoes_col, radius = 2)
                         self.infected_mosquito_container.add(infected_mosquitoes)
@@ -472,7 +488,7 @@ class Simulation:
                 font.render("Infected: " + str(len(self.infected_people_container)), True, (infected_people_col)),
                 font.render("Dead: " + str(len(self.dead_container)), True, (dead_col)),
                 font.render("Male Mosquitoes: " + str(len(self.male_container)), True, (male_mosq_col)),
-                font.render("Susceptible Mosquitoes: " + str(len(self.dead_container)), True, (susceptible_mosquito_col)),
+                font.render("Susceptible Mosquitoes: " + str(len(self.susceptible_mosquito_container)), True, (susceptible_mosquito_col)),
                 font.render("Infected Mosquitoes: " + str(len(self.infected_mosquito_container)), True, (infected_mosquitoes_col)),
             ]
             text_surfaces.reverse()

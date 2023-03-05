@@ -1,17 +1,45 @@
 class MalariaModel:
-    def __init__(self, c_ve, beta, I_v, N_h):
-        self.c_ve = c_ve #probability of infection
-        self.beta = beta #Periodic Biting Rate
-        self.I_v = I_v #Number of Infected People
-        self.N_h = N_h #Total Population
+    def __init__(self, human_population, infected_population, immune_class, transmission_rate, probability_infection, biting_rate):
+        self.human_population = human_population
+        self.infected_population = infected_population #infected_population
+        self.immune_class = immune_class #Immune class
+        
+        self.transmission_rate = transmission_rate  # Transmission rate
+        
+        self.probability_infection = probability_infection # Probability of infection
+        self.biting_rate= biting_rate #Periodic biting Rate
+        
+
+    def human_to_mosquito(self):
+        """
+        Calculates the transmission rate from humans to mosquitoes.
+
+        Parameters:
+        I_a: float, number of infectious individuals in the semi-immune population
+        I_e: float, number of infectious individuals in the non-immune population
+        R_a: float, number of immune individuals in the semi-immune population
+        beta: float, periodic bite rate
+
+        Returns:
+        k_v: float, transmission rate from humans to mosquitoes
+        """
+        human_mosq = ((self.transmission_rate * self.biting_rate) * (self.infected_population / self.human_population)) +((self.transmission_rate * self.biting_rate) * (self.infected_population / self.human_population)) + ((self.transmission_rate * self.biting_rate) * (self.immune_class / self.human_population))
+        print('Human to Mosquito',human_mosq)
+        return human_mosq
     
     def mosquito_to_nonimmune(self):
-        k_e = ((self.c_ve * self.beta)*(self.I_v / self.N_h))
-        return k_e
+        mosq_nonimmune = ((self.probability_infection * self.biting_rate)*(self.infected_population / self.human_population))
+        print('Mosquito to Human', mosq_nonimmune)
+        return mosq_nonimmune
+    
+
 
 # create an instance of MalariaModel
-malaria = MalariaModel(c_ve=0.5, beta=1, I_v=1000, N_h=5000)
+malaria = MalariaModel(human_population = 5000, infected_population = 2000, immune_class = 100, transmission_rate = 1.2, probability_infection = 0.8, biting_rate = 1.2)
 
 # calculate k_e at time step t
-k_e = malaria.mosquito_to_nonimmune()
-print(k_e)
+blah = malaria.human_to_mosquito()
+sad = malaria.mosquito_to_nonimmune()
+
+# print(k_e)
+
