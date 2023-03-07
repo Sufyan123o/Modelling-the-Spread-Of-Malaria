@@ -1,15 +1,12 @@
-import pygame, sys
+import pygame
 import numpy as np
 import random
 import pygame.math
 import pygame.font
-from pygame import math
-import matplotlib.pyplot as plt
-import time
 
 #Colours
 susceptible_people_col = (211,211,211)
-semi_immune_col = (144, 238, 144) #light green PKA WHITE
+semi_immune_col = (255,192,203) #pink
 infected_people_col = (0, 255, 0) #infected people
 dead_col = (56, 26, 20) #black
 immune_col = (255, 165, 0) 
@@ -38,6 +35,7 @@ class mosquito(pygame.sprite.Sprite):
         self.fatality_on = False
         self.recovered = False
         self.dead = False
+        self.semi_immune = False
 
         self.WIDTH = width
         self.HEIGHT = height
@@ -50,7 +48,7 @@ class mosquito(pygame.sprite.Sprite):
         
         self.move = 2
 
-    def update(self, radius=5):
+    def update(self):
         # Assigns a speed to the position vector
         self.pos += self.vel
 
@@ -79,12 +77,18 @@ class mosquito(pygame.sprite.Sprite):
         self.rect.x = dx
         self.rect.y = dy
 
+
+        #handles mosqutioes making a person semi immune, recovered or killing them.
+        semi_immune_probability = 0.2
+        
         if self.fatality_on:
             self.cycles_to_death -= 10
             if self.cycles_to_death <= 0:
                 self.fatality_on = False
                 if self.mortality_rate > random.uniform(0, 1):
                     self.dead = True
+                elif semi_immune_probability > random.uniform(0,1):
+                    self.semi_immune = True
                 else:
                     self.recovered = True
         
@@ -136,7 +140,7 @@ class mosquito(pygame.sprite.Sprite):
             self.cycles_to_death = cycles_to_death
             self.mortality_rate = mortality_rate
             
-    def infect_mosquito(self, color, radius = 2):
+    def infect_mosquito(self, color):
         self.kill()
         infected_mosquito = person(self.rect.x, self.rect.y, self.WIDTH, self.HEIGHT, color=color, velocity=self.vel, radius = 2)
         # infected_mosquito = mosquito(x, y, self.WIDTH, self.HEIGHT, color = infected_mosquitoes_col, velocity = vel )
@@ -162,6 +166,26 @@ class person(mosquito, pygame.sprite.Sprite):
         self.susceptible_people_container.add(susceptible_people)
         self.all_container.add(susceptible_people)
         
+    def spawn_semi_immune(self):
+        x = np.random.randint(80, self.sim_width + 1)
+        y = np.random.randint(80, self.sim_height + 1)
+        vel = np.random.rand(2) * 2 - 1
+        np.random.rand(2)
+        semi_immmune = person(x, y, self.sim_width, self.sim_height, color = semi_immune_col, velocity = vel, radius = 5)
+        
+        self.semi_immune_container.add(semi_immmune)
+        self.all_container.add(semi_immmune)
+    
+    def make_semi_immune(self, simulation, color, radius = 5):
+        self.kill()
+        
+        semi_immune_person = person(self.rect.x, self.rect.y, self.WIDTH, self.HEIGHT, color=color, velocity=self.vel, radius = radius)
+        simulation.all_container.add(semi_immune_person)
+        simulation.semi_immune_container.add(semi_immune_person)
+        
+        
+        return semi_immune_person
+    
     def recover(self, simulation, color, radius = 5):
         self.kill()
         
@@ -177,8 +201,6 @@ class person(mosquito, pygame.sprite.Sprite):
         dead_person = person(self.rect.x, self.rect.y, self.WIDTH, self.HEIGHT, color=color, velocity=self.vel, radius = radius)
         simulation.dead_container.add(dead_person)
         simulation.all_container.add(dead_person)
-        
-        
         return dead_person
     
     def movement(self):
@@ -187,7 +209,7 @@ class person(mosquito, pygame.sprite.Sprite):
             self.pos += displacement * 2  # adjust the scaling factor to control the amount of displacement
 
 class MalariaModel:
-    def __init__(self, human_population, infected_population, immune_class, transmission_rate, probability_infection, biting_rate):
+    def __init__(self, human_population, infected_population, immune_class, transmission_rate, probability_infection, biting_rate, semi_immune_probability):
         self.human_population = human_population
         self.infected_population = infected_population #infected_population
         self.immune_class = immune_class #Immune class
@@ -195,22 +217,26 @@ class MalariaModel:
         self.transmission_rate = transmission_rate  # Transmission rate
         
         self.probability_infection = probability_infection # Probability of infection
+        self.semi_immune_probability = semi_immune_probability
         self.biting_rate= biting_rate #Periodic biting Rate
         
 
     def human_to_mosquito(self):
         
         human_mosq = ((self.transmission_rate * self.biting_rate) * (self.infected_population / self.human_population)) + ((self.transmission_rate * self.biting_rate) * (self.infected_population / self.human_population))+ ((self.transmission_rate * self.biting_rate) * (self.immune_class / self.human_population))
-        print('Human to Mosquito',human_mosq)
+        print('human to mosquito: ',human_mosq)
         return human_mosq
     
     def mosquito_to_nonimmune(self):
         mosq_nonimmune = ((self.probability_infection * self.biting_rate)*(self.infected_population / self.human_population))
-        print('Mosquito to Human', mosq_nonimmune)
+        print('mosqutio to non immune: ',mosq_nonimmune)
+        
         return mosq_nonimmune
     
     def mosquito_to_semi_immune(self):
-        pass
+        mosq_semi_immune = ((self.semi_immune_probability*self.biting_rate)*(self.infected_population / self.human_population))
+        print('mosquito to semi immune: ',mosq_semi_immune)
+        return mosq_semi_immune
 
 
 class Graph:
@@ -342,7 +368,7 @@ class Simulation:
         #A container class to hold and manage multiple Sprite objects in this case to manage each category of person and mosquito
         #pygame.sprite.Group objects act as a hashmap to all objects in the group
         self.susceptible_people_container = pygame.sprite.Group()
-        self.semi_immune_people_container = pygame.sprite.Group()
+        self.semi_immune_container = pygame.sprite.Group()
         self.infected_people_container = pygame.sprite.Group()
         self.dead_container = pygame.sprite.Group()
         self.male_container = pygame.sprite.Group()
@@ -354,10 +380,11 @@ class Simulation:
         
         #Variables
         self.n_susceptible_mosquito = 80
-        self.n_infected_mosquito = 50
+        self.n_infected_mosquito = 80
         self.n_male_mosquito = 15
-        self.n_susceptible_people = 200
+        self.n_susceptible_people = 150
         self.n_infected_people = 100
+        self.n_semi_immune = 10
         self.cycles_to_death = 1000
         self.mortality_rate = 0.2
         
@@ -390,6 +417,10 @@ class Simulation:
         
         for i in range(self.n_susceptible_mosquito):
             mosquito.spawn_susceptible_mosquitoes(self)
+            
+        for i in range(self.n_semi_immune):
+            person.spawn_semi_immune(self)
+        
         clock = pygame.time.Clock()
         self.graph = Graph(700, screen, self.WIDTH, self.HEIGHT)
 
@@ -419,14 +450,14 @@ class Simulation:
             collision_group = pygame.sprite.groupcollide(self.susceptible_people_container,self.infected_mosquito_container,False,False)
             
             malaria = MalariaModel(human_population = len(self.all_container), infected_population = len(self.infected_people_container), immune_class = len(self.immune_container),
-                                   transmission_rate = 1.2, probability_infection = 0.8, biting_rate = 1.2)
+                                   transmission_rate = 1.2, probability_infection = 0.8, biting_rate = 1.2, semi_immune_probability = 10)
 
             
             #Uses collision_group to make susceptible people infected by mosquitoes
             for susceptible_people, infected_mosquitoes in collision_group.items():
                 if susceptible_people or infected_mosquitoes not in self.immune_container:
                     incidence = malaria.mosquito_to_nonimmune()
-                    if incidence < 10:
+                    if incidence < random.uniform(0,1):
                         infected_people = susceptible_people.infect_person(infected_people_col, radius = 5)
                         infected_people.vel *= -1
                         infected_people.fatality(self.cycles_to_death, self.mortality_rate)
@@ -435,19 +466,26 @@ class Simulation:
                         infected_people.update()
 
             
+            
+            
+            
             #Uses Collision group to make susceptible mosquitoes infected by susceptible people.
             collision_group = pygame.sprite.groupcollide(self.susceptible_mosquito_container,self.infected_people_container,False,False)
             
+            #Determines whether a human infects a mosquito after a blood meal
             for susceptible_mosquitoes, infected_people in collision_group.items():
                 if susceptible_mosquitoes or infected_people in self.immune_container:
-                    incidence = malaria.human_to_mosquito()
-                    if incidence < 10:
-                        infected_mosquitoes = susceptible_mosquitoes.infect_mosquito(infected_mosquitoes_col, radius = 2)
+                    incidence = malaria.human_to_mosquito() #Calculates Incidence
+                    if incidence < random.uniform(0,1):
+                        infected_mosquitoes = susceptible_mosquitoes.infect_mosquito(infected_mosquitoes_col)
                         self.infected_mosquito_container.add(infected_mosquitoes)
                         self.all_container.add(infected_mosquitoes)
             
             to_remove = []
             to_recover = []
+            to_semi_immune = []
+            
+            
             for infected_person in self.infected_people_container:
                 if infected_person.recovered:
                     to_remove.append(infected_person)
@@ -456,27 +494,54 @@ class Simulation:
                     to_remove.append(infected_person)
                     dead_person = infected_person.kill_person(self, dead_col, vel=0)
                     self.dead_container.add(dead_person)
+                elif infected_person.semi_immune:
+                    to_remove.append(infected_person)
+                    to_semi_immune.append(infected_person)
+                    
 
             for people in to_remove:
                 self.infected_people_container.remove(people)
                 self.all_container.remove(people)
 
+            for people in to_semi_immune:
+                semi_immune_person = people.make_semi_immune(self, semi_immune_col)
+                self.semi_immune_container.add(semi_immune_person)
+                self.all_container.add(semi_immune_person)
+                
             for people in to_recover:
                 recovered_person = people.recover(self, immune_col)
                 self.immune_container.add(recovered_person)
                 self.all_container.add(recovered_person)
 
+            collision_group = pygame.sprite.groupcollide(self.semi_immune_container,self.infected_mosquito_container,False,False)
+
+            #Determines whether a semi_immune person gets infected again after an infected mosquito has a blood meal
+            for semi_immune_person, infected_mosquitoes in collision_group.items():
+                if semi_immune_person or infected_mosquitoes not in self.immune_container:
+                    incidence = malaria.mosquito_to_semi_immune()
+                    if incidence < random.uniform(0,1):
+                        infected_people = semi_immune_person.infect_person(infected_people_col, radius = 5)
+                        infected_people.vel *= -1
+                        infected_people.fatality(self.cycles_to_death, self.mortality_rate)
+                        self.infected_people_container.add(infected_people)
+                        self.all_container.add(infected_people)
+                        infected_people.update()
+            
             for i in self.all_container:
                 if isinstance(i, person):
                     if i not in self.dead_container:
                         i.movement()
                 
-            # Draw all Objects on the Screen
-            self.all_container.draw(screen)
+
             
             if len(to_recover) > 0:
                 self.infected_mosquito_container.remove(*to_recover)
                 self.all_container.remove(*to_recover)
+            
+            
+            # Update the graph with the counts for each group
+            self.graph.update(len(self.susceptible_people_container), len(self.semi_immune_container), 
+                                len(self.infected_people_container), len(self.dead_container), len(self.male_container), len(self.immune_container), len(self.infected_mosquito_container))
                 
             # Create font object
             font = pygame.font.SysFont(None, 30)
@@ -490,6 +555,7 @@ class Simulation:
                 font.render("Male Mosquitoes: " + str(len(self.male_container)), True, (male_mosq_col)),
                 font.render("Susceptible Mosquitoes: " + str(len(self.susceptible_mosquito_container)), True, (susceptible_mosquito_col)),
                 font.render("Infected Mosquitoes: " + str(len(self.infected_mosquito_container)), True, (infected_mosquitoes_col)),
+                font.render("Semi Immune People: " + str(len(self.semi_immune_container)), True, (semi_immune_col))
             ]
             text_surfaces.reverse()
             
@@ -500,14 +566,16 @@ class Simulation:
                 screen.blit(text_surface, (self.sim_width + 100, self.HEIGHT - self.sim_height + 160 - i*30))
             screen.blit(self.text, self.text_rect)
             
-            # Update the graph with the counts for each group
-            self.graph.update(len(self.susceptible_people_container), len(self.semi_immune_people_container), 
-                              len(self.infected_people_container), len(self.dead_container), len(self.male_container), len(self.immune_container), len(self.infected_mosquito_container))
+
             
             # draw the simulation and the real-time graph on the same Pygame window
             frame_rate = "Frame Rate: " + str(int(clock.get_fps()))
             frame_rate_surface = font.render(frame_rate, True, (255, 255, 255))
             screen.blit(frame_rate_surface, (10, 10))
+            
+            # Draw all Objects on the Screen
+            self.all_container.draw(screen)
+            
             clock.tick(60)
             pygame.display.flip()
 
