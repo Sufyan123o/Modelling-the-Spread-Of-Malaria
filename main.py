@@ -3,6 +3,8 @@ import numpy as np
 import random
 import pygame.math
 import pygame.font
+import config
+
 
 #Colours
 susceptible_people_col = (211,211,211)
@@ -15,6 +17,8 @@ susceptible_mosquito_col = (50, 150, 50) #GREEN
 infected_mosquitoes_col = (255,0,0) #red
 background_col = (25, 25, 34)  #Blue/grey
 inner_surface_col = (33,33,45) #grey
+current_simulation = None
+
 
 
 class mosquito(pygame.sprite.Sprite):
@@ -95,7 +99,7 @@ class mosquito(pygame.sprite.Sprite):
     def infect_person(self, color, radius = 5):
         self.kill()
         infected_person = person(self.rect.x,self.rect.y,self.WIDTH,self.HEIGHT,color=color,velocity=self.vel, radius = radius)
-        simulation = Simulation()
+        simulation = Simulation.get_instance()
         simulation.all_container.add(infected_person)
         return infected_person
     
@@ -144,7 +148,7 @@ class mosquito(pygame.sprite.Sprite):
         self.kill()
         infected_mosquito = person(self.rect.x, self.rect.y, self.WIDTH, self.HEIGHT, color=color, velocity=self.vel, radius = 2)
         # infected_mosquito = mosquito(x, y, self.WIDTH, self.HEIGHT, color = infected_mosquitoes_col, velocity = vel )
-        simulation = Simulation()
+        simulation = Simulation.get_instance()
         # Simulation.infected_mosquito_container.add(infected_mosquito)
         simulation.all_container.add(infected_mosquito)
         
@@ -337,7 +341,10 @@ class Graph:
         self.zoom = max(self.zoom - 0.1, 0.1)
 
 class Simulation:
-    def __init__(self, width=1600, height=900, sim_width=800, sim_height=800):
+    
+    _instance = None
+
+    def __init__(self,n_susceptible_mosquito, n_infected_mosquito,n_male_mosquito,n_susceptible_people, n_infected_people,n_semi_immune, mortality_rate, width=1600, height=900, sim_width=800, sim_height=800):
         self.WIDTH = width
         self.HEIGHT = height
         self.sim_height = sim_height
@@ -377,19 +384,30 @@ class Simulation:
         self.infected_mosquito_container = pygame.sprite.Group()
         self.all_container = pygame.sprite.Group()
         
+        # config = open("config.py", "r")
+
         
         #Variables
-        self.n_susceptible_mosquito = 80
-        self.n_infected_mosquito = 80
-        self.n_male_mosquito = 15
-        self.n_susceptible_people = 150
-        self.n_infected_people = 100
-        self.n_semi_immune = 10
-        self.cycles_to_death = 1000
-        self.mortality_rate = 0.2
-        
-        
-        
+        self.n_susceptible_mosquito = n_susceptible_mosquito
+        self.n_infected_mosquito = n_infected_mosquito
+        self.n_male_mosquito = n_male_mosquito
+        self.n_susceptible_people = n_susceptible_people
+        self.n_infected_people = n_infected_people
+        self.n_semi_immune = n_semi_immune
+        self.cycles_to_death = 10
+        self.mortality_rate = mortality_rate
+
+
+        # Set the instance variable to the current instance
+        Simulation._instance = self
+
+    @classmethod
+    def get_instance(cls):
+        # Return the existing instance or create a new one
+        if cls._instance is None:
+            raise ValueError("Simulation instance not created")
+        return cls._instance
+    
     def start(self):
         
         #initiliases pygame window and display
@@ -437,8 +455,6 @@ class Simulation:
                         self.graph.zoom_out()
 
             screen.fill(background_col)
-            
-            
 
             self.all_container.update()
             
@@ -579,10 +595,16 @@ class Simulation:
             clock.tick(60)
             pygame.display.flip()
 
+def run_simulation(n_susceptible_mosquito, n_infected_mosquito, n_male_mosquito, n_susceptible_people, n_infected_people, n_semi_immune, mortality_rate):
+    global current_simulation
+    current_simulation = Simulation(n_susceptible_mosquito, n_infected_mosquito, n_male_mosquito, n_susceptible_people, n_infected_people, n_semi_immune, mortality_rate)
+    current_simulation.start()
 
-if __name__ == "__main__":
-    malaria = Simulation()
-    malaria.start()
+
+
+# if __name__ == "__main__":
+#     malaria = Simulation()
+#     malaria.start()
 
 
 
