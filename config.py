@@ -1,6 +1,8 @@
 import tkinter as tk
 import math
 import main
+import sys
+
 class SimulationInputs:
     def __init__(self, susceptible_mosquito, infected_mosquito, male_mosquito,
                     susceptible_people, infected_people, semi_immune, mortality_rate):
@@ -43,14 +45,14 @@ class Window(tk.Tk):
         self.label_fibonacci = tk.Label(self, text="Fibonacci sequence:")
         self.label_primes = tk.Label(self, text="Prime numbers up to:")
 
-        self.scale_mosquito_susceptible = tk.Scale(self, from_=5, to=250, orient=tk.HORIZONTAL)
-        self.scale_mosquito_infected = tk.Scale(self, from_=5, to=250, orient=tk.HORIZONTAL)
-        self.scale_mosquito_male = tk.Scale(self, from_=5, to=250, orient=tk.HORIZONTAL)
-        self.scale_people_susceptible = tk.Scale(self, from_=5, to=250, orient=tk.HORIZONTAL)
-        self.scale_people_infected = tk.Scale(self, from_=5, to=250, orient=tk.HORIZONTAL)
-        self.scale_semi_immune = tk.Scale(self, from_=5, to=250, orient=tk.HORIZONTAL)
+        self.scale_mosquito_susceptible = tk.Scale(self, from_=0, to=250, orient=tk.HORIZONTAL)
+        self.scale_mosquito_infected = tk.Scale(self, from_=100, to=250, orient=tk.HORIZONTAL)
+        self.scale_mosquito_male = tk.Scale(self, from_=0, to=250, orient=tk.HORIZONTAL)
+        self.scale_people_susceptible = tk.Scale(self, from_=0, to=250, orient=tk.HORIZONTAL)
+        self.scale_people_infected = tk.Scale(self, from_=0, to=250, orient=tk.HORIZONTAL)
+        self.scale_semi_immune = tk.Scale(self, from_=100, to=250, orient=tk.HORIZONTAL)
         self.scale_mortality_rate = tk.Scale(self, from_=0, to=1, resolution=0.01, orient=tk.HORIZONTAL)
-        self.scale_factorial = tk.Scale(self, from_=0, to=10, orient=tk.HORIZONTAL)
+        self.scale_factorial = tk.Scale(self, from_=0, to=100, orient=tk.HORIZONTAL)
         self.scale_fibonacci = tk.Scale(self, from_=0, to=20, orient=tk.HORIZONTAL)
         self.scale_primes = tk.Scale(self, from_=0, to=100, orient=tk.HORIZONTAL)
 
@@ -101,18 +103,11 @@ class Window(tk.Tk):
         mortality_rate = self.scale_mortality_rate.get()
         
         # Call function to run simulation with input values
+        
         main.run_simulation(n_susceptible_mosquito, n_infected_mosquito, n_male_mosquito, n_susceptible_people, n_infected_people, n_semi_immune, mortality_rate)
 
-        # Test the inputs by printing them to the console
-        print(f"Susceptible mosquitoes: {self.inputs.susceptible_mosquito}")
-        print(f"Infected mosquitoes: {self.inputs.infected_mosquito}")
-        print(f"Male mosquitoes: {self.inputs.male_mosquito}")
-        print(f"Susceptible people: {self.inputs.susceptible_people}")
-        print(f"Infected people: {self.inputs.infected_people}")
-        print(f"Semi-immune people: {self.inputs.semi_immune}")
-        print(f"Mortality rate: {self.inputs.mortality_rate}")
-        
-        return n_susceptible_mosquito,n_infected_mosquito ,n_male_mosquito,n_susceptible_people,n_infected_people ,n_semi_immune,mortality_rate 
+        Window.destroy(self)
+        sys.exit(Window)
 
     def calculate_factorial(self):
         n = self.scale_factorial.get()
@@ -131,6 +126,7 @@ class Window(tk.Tk):
         primes = []
         for i in range(2, n+1):
             is_prime = True
+            
             for j in range(2, int(math.sqrt(i))+1):
                 if i % j == 0:
                     is_prime = False
