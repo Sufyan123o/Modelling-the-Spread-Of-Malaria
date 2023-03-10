@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import END, Text
 import math
 import main
 import sys
@@ -33,7 +34,8 @@ class Window(tk.Tk):
         super().__init__()
         self.title("Mosquito Simulation Inputs")
         self.geometry("400x900")
-        
+        self.text_primes = Text(self)
+
         self.label_mosquito_susceptible = tk.Label(self, text="Number of susceptible mosquitoes:")
         self.label_mosquito_infected = tk.Label(self, text="Number of infected mosquitoes:")
         self.label_mosquito_male = tk.Label(self, text="Number of male mosquitoes:")
@@ -53,7 +55,7 @@ class Window(tk.Tk):
         self.scale_semi_immune = tk.Scale(self, from_=100, to=500, orient=tk.HORIZONTAL)
         self.scale_mortality_rate = tk.Scale(self, from_=0, to=1, resolution=0.01, orient=tk.HORIZONTAL)
         self.scale_factorial = tk.Scale(self, from_=0, to=100, orient=tk.HORIZONTAL)
-        self.scale_fibonacci = tk.Scale(self, from_=0, to=20, orient=tk.HORIZONTAL)
+        self.scale_fibonacci = tk.Scale(self, from_=0, to=100, orient=tk.HORIZONTAL)
         self.scale_primes = tk.Scale(self, from_=0, to=100, orient=tk.HORIZONTAL)
 
         self.button_submit = tk.Button(self, text="Submit", command=self.submit_inputs_callback)
@@ -112,27 +114,70 @@ class Window(tk.Tk):
     def calculate_factorial(self):
         n = self.scale_factorial.get()
         result = math.factorial(n)
-        print(f"{n}! = {result}")
+        # Delete any existing text in the text widget.
+        self.text_primes.delete("1.0", END)
+        
+        # Insert the factorial into the text widget.
+        self.text_primes.insert(END, f"{n}! = {result}")
+        
+        # Pack the text widget into the window.
+        self.text_primes.pack()
+
 
     def generate_fibonacci(self):
         n = self.scale_fibonacci.get()
         sequence = [0, 1]
         for i in range(2, n+1):
             sequence.append(sequence[i-1] + sequence[i-2])
-        print(f"Fibonacci sequence up to {n}: {sequence}")
-
+        # print(f"Fibonacci sequence up to {n}: {sequence}")
+        
+        # Convert the list of primes to a string.
+        sequence_str = ", ".join(str(p) for p in sequence)
+        # Delete any existing text in the text widget.
+        self.text_primes.delete("1.0", END)
+        # Insert the list of primes into the text widget.
+        self.text_primes.insert(END, f"Fibonacci sequence up to  {n}: {sequence_str}")
+        self.text_primes.pack()
+    
     def generate_primes(self):
+        # Get the maximum value of n from the GUI.
         n = self.scale_primes.get()
+        
+        # Create an empty list to store the prime numbers.
         primes = []
+        
+        # Iterate over all numbers from 2 to n.
         for i in range(2, n+1):
+            # Assume that i is a prime number until proven otherwise.
             is_prime = True
             
+            # Check all numbers from 2 to sqrt(i) to see if they divide i.
             for j in range(2, int(math.sqrt(i))+1):
                 if i % j == 0:
+                    # If j divides i, then i is not a prime number.
                     is_prime = False
-                    break
-            primes.append(i)
-            print(f"Prime numbers up to {n}: {primes}")
+                    
+                    # We don't need to check any more factors since we know it's not a prime.
+                    # Commenting out the following line since it is no longer needed:
+                    # break
+            
+            # If i is prime, add it to the list of primes.
+            if is_prime:
+                primes.append(i)
+        
+        # Convert the list of primes to a string.
+        primes_str = ", ".join(str(p) for p in primes)
+        
+        # Delete any existing text in the text widget.
+        self.text_primes.delete("1.0", END)
+            
+        # Insert the list of primes into the text widget.
+        self.text_primes.insert(END, f"Prime numbers up to {n}: {primes_str}")
+        
+        self.text_primes.pack()
+
+
+
 
 if __name__  == "__main__":
     window = Window()
