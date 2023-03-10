@@ -3,6 +3,7 @@ import numpy as np
 import random
 import pygame.math
 import pygame.font
+import math
 
 #Constant colours to identify objects on screen 
 SUSCEPTIBLE_PEOPLE_COL = (211,211,211)
@@ -19,20 +20,15 @@ CURRENT_SIMULATION  = None
 
 
 
-class mosquito(pygame.sprite.Sprite):
+class Malaria(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height, color=DEAD_COL, radius=2, velocity=[0, 0]):
         super().__init__()
         # Creates Mosquitoes
         self.image = pygame.Surface([radius * 2, radius * 2]).convert_alpha()
-        self.image.fill(INNER_SURFACE_COL )
+        self.image.fill(INNER_SURFACE_COL)
         pygame.draw.circle(self.image, color, (radius, radius), radius)
         self.x = x
         self.y = y
-
-        # Mosquito location assigned used a vector
-        self.rect = self.image.get_rect()  # gets the position of the object on the screen.
-        self.pos = np.array([x, y], dtype=np.float64)
-        self.vel = np.asarray(velocity, dtype=np.float64)
 
         self.fatality_on = False
         self.recovered = False
@@ -47,53 +43,104 @@ class mosquito(pygame.sprite.Sprite):
 
         self.window_xpos = 80
         self.window_ypos = 80
-        
+
+        # Mosquito location assigned used a vector
+        self.rect = self.image.get_rect()  # gets the position of the object on the screen.
+        self.rect.x = random.randint(1, self.sim_width)
+        self.rect.y = random.randint(1, self.sim_height)
+        self.pos = self.rect.x, self.rect.y
+        self.vel = np.asarray(velocity, dtype=np.float64)
+
         self.move = 2
+        self.inside = None
+        self.stay_time = 100
+        self.line_to_dest = None
 
-    def update(self):
-        # Assigns a speed to the position vector
-        self.pos += self.vel
+    def route(self, dest: tuple[int, int], set_home: bool) -> None:
 
+        # Set a home which can be returned to
+        if set_home:
+            self.home = self.pos
+
+        self.inside = dest
+
+        x1, y1 = self.pos
+        x2, y2 = self.inside
+
+        i, j = x2 - x1, y2 - y1
+
+        magnitude = math.sqrt(i**2 + j**2)
+        
+
+        try:
+            # Vector on which mosquito should move to the destination
+            self.vector = (i * self.vel) / magnitude, (j * self.vel) / magnitude
+            self.line_to_dest = (self.pos, self.inside)
+        except ZeroDivisionError:
+            # Occurs when magnitude is so small float rounds to zero
+            # This means mosquito is already next to the destination, so do not create route
+            self.inside = None
+
+    
+    def update(self, inner_surface):
         # Add random displacement within the range [-1, 1]
         displacement = np.random.rand(2) * 2 - 1
         self.pos += displacement * 0.5
 
-        # Position vector
-        dx, dy = self.pos
+        if self.inside is not None:
+            inside_x, inside_x = self.inside
+            dx, dy = self.pos
+            dist = math.sqrt((inside_x - dx) ** 2 + (inside_x - dy) ** 2)
+            
+            delta_x = (inside_x - dx)
+            delta_y = (inside_x - dy)
+            new_pos = np.array([dx + delta_x, dy + delta_y], dtype=np.float64)
 
-        # Periodic boundary conditions to prevent objects going off the screen
-        # if the person goes off screen it puts them on the other side
-        if dx < self.window_xpos:  # left boarder
-            self.pos[0] = self.window_xpos + self.sim_width
-            dx = self.window_xpos + self.sim_width
-        if dx > self.window_xpos + self.sim_width:  # right boarder
-            self.pos[0] = self.window_xpos
-            dx = self.window_xpos
-        if dy < self.window_ypos:  # top boarder
-            self.pos[1] = self.window_ypos + self.sim_height
-            dy = self.window_ypos + self.sim_height
-        if dy > self.window_ypos + self.sim_height:  # bottom boarder
-            self.pos[1] = self.window_ypos
-            dy = self.window_ypos
+            # Draw line to show path
+            pygame.draw.line(inner_surface, (255,255,255), self.pos, new_pos)
 
-        self.rect.x = dx
-        self.rect.y = dy
+            # Update position of rect on surface
+            self.rect.x = round(new_pos[0])
+            self.rect.y = round(new_pos[1])
+            self.pos = new_pos
+
+            # Check if mosquito has reached its destination
+            if dist < self.vel:
+                self.inside = None
+            pygame.draw.line(inner_surface, (255,255,255), self.pos, new_pos)
+            
+        else:
+            # Randomly move mosquito
+            self.pos += self.vel
+            dx, dy = self.pos
+            if dx < self.window_xpos:  # left boarder
+                self.pos[0] = self.window_xpos + self.sim_width
+            if dx > self.window_xpos + self.sim_width:  # right boarder
+                self.pos[0] = self.window_xpos
+            if dy < self.window_ypos:  # top boarder
+                self.pos[1] = self.window_ypos + self.sim_height
+            if dy > self.window_ypos + self.sim_height:  # bottom boarder
+                self.pos[1] = self.window_ypos
+            self.rect.x = round(self.pos[0])
+            self.rect.y = round(self.pos[1])
+
+            # Handles mosquitos making a person semi immune, recovered or killing them.
+            semi_immune_probability = 0.2
+            if self.fatality_on:
+                self.cycles_to_death -= 10
+                if self.cycles_to_death <= 0:
+                    self.fatality_on = False
+                    if self.mortality_rate > random.uniform(0, 1):
+                        self.dead = True
+                    elif semi_immune_probability > random.uniform(0, 1):
+                        self.semi_immune = True
+                    else:
+                        self.recovered = True
+
+        return False
 
 
-        #handles mosqutioes making a person semi immune, recovered or killing them.
-        semi_immune_probability = 0.2
-        
-        if self.fatality_on:
-            self.cycles_to_death -= 10
-            if self.cycles_to_death <= 0:
-                self.fatality_on = False
-                if self.mortality_rate > random.uniform(0, 1):
-                    self.dead = True
-                elif semi_immune_probability > random.uniform(0,1):
-                    self.semi_immune = True
-                else:
-                    self.recovered = True
-        
+    
     def infect_person(self, color, radius = 5):
         self.kill()
         infected_person = person(self.rect.x,self.rect.y,self.WIDTH,self.HEIGHT,color=color,velocity=self.vel, radius = radius)
@@ -107,7 +154,7 @@ class mosquito(pygame.sprite.Sprite):
         y = np.random.randint(80, self.sim_height + 1)
         vel = np.random.rand(2) * 2 - 1
         
-        infected_mosquito = mosquito(x, y, self.WIDTH, self.HEIGHT, color = INFECTED_MOSQUITOES_COL , velocity = vel )
+        infected_mosquito = Malaria(x, y, self.WIDTH, self.HEIGHT, color = INFECTED_MOSQUITOES_COL , velocity = vel )
         
         self.infected_mosquito_container.add(infected_mosquito)
         
@@ -119,7 +166,7 @@ class mosquito(pygame.sprite.Sprite):
         vel = np.random.rand(2) * 2 - 1
         np.random.rand(2)
         
-        male_mosquito = mosquito(x, y, self.WIDTH, self.HEIGHT, color = MALE_MOSQUITO_COL, velocity = vel )
+        male_mosquito = Malaria(x, y, self.WIDTH, self.HEIGHT, color = MALE_MOSQUITO_COL, velocity = vel )
         
         self.male_container.add(male_mosquito)
         
@@ -131,7 +178,7 @@ class mosquito(pygame.sprite.Sprite):
         vel = np.random.rand(2) * 2 - 1
         np.random.rand(2)
         
-        suscpetible_mosquito = mosquito(x, y, self.WIDTH, self.HEIGHT, color = SUSCEPTIBLE_MOSQUITO_COL , velocity = vel )
+        suscpetible_mosquito = Malaria(x, y, self.WIDTH, self.HEIGHT, color = SUSCEPTIBLE_MOSQUITO_COL , velocity = vel )
         
         self.susceptible_mosquito_container.add(suscpetible_mosquito)
         
@@ -157,7 +204,7 @@ class mosquito(pygame.sprite.Sprite):
         self.pos += displacement * 2  # adjust the scaling factor to control the amount of displacement
         # insectid
 
-class person(mosquito, pygame.sprite.Sprite):
+class person(Malaria, pygame.sprite.Sprite):
     def spawn_people(self):
         x = np.random.randint(80, self.sim_width + 1)
         y = np.random.randint(80, self.sim_height + 1)
@@ -226,18 +273,18 @@ class MalariaModel:
     def human_to_mosquito(self):
         
         human_mosq = ((self.transmission_rate * self.biting_rate) * (self.infected_population / self.human_population)) + ((self.transmission_rate * self.biting_rate) * (self.infected_population / self.human_population))+ ((self.transmission_rate * self.biting_rate) * (self.immune_class / self.human_population))
-        print('human to mosquito: ',human_mosq)
+        # print('human to mosquito: ',human_mosq)
         return human_mosq
     
     def mosquito_to_nonimmune(self):
         mosq_nonimmune = ((self.probability_infection * self.biting_rate)*(self.infected_population / self.human_population))
-        print('mosqutio to non immune: ',mosq_nonimmune)
+        # print('mosqutio to non immune: ',mosq_nonimmune)
         
         return mosq_nonimmune
     
     def mosquito_to_semi_immune(self):
         mosq_semi_immune = ((self.semi_immune_probability*self.biting_rate)*(self.infected_population / self.human_population))
-        print('mosquito to semi immune: ',mosq_semi_immune)
+        # print('mosquito to semi immune: ',mosq_semi_immune)
         return mosq_semi_immune
 
 
@@ -426,13 +473,13 @@ class Simulation:
         
         #loop which moves non infected mosquitoes on screen
         for i in range(self.n_infected_mosquito):
-            mosquito.spawn_mosquitoes(self)
+            Malaria.spawn_mosquitoes(self)
         
         for i in range(self.n_male_mosquito):
-            mosquito.spawn_male_mosquitoes(self)
+            Malaria.spawn_male_mosquitoes(self)
         
         for i in range(self.n_susceptible_mosquito):
-            mosquito.spawn_susceptible_mosquitoes(self)
+            Malaria.spawn_susceptible_mosquitoes(self)
             
         for i in range(self.n_semi_immune):
             person.spawn_semi_immune(self)
@@ -452,10 +499,10 @@ class Simulation:
                     elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
                         self.graph.zoom_out()
 
-            screen.fill(BACKGROUND_COL )
+            screen.fill(BACKGROUND_COL)
 
-            self.all_container.update()
-            
+            self.all_container.update(inner_surface=self.inner_surface)
+
             
             self.inner_surface.fill(INNER_SURFACE_COL )
             screen.blit(self.inner_surface, ((80, 80)))
@@ -477,7 +524,7 @@ class Simulation:
                         infected_people.fatality(self.cycles_to_death, self.mortality_rate)
                         self.infected_people_container.add(infected_people)
                         self.all_container.add(infected_people)
-                        infected_people.update()
+                        infected_people.update(inner_surface=self.inner_surface)
 
             
             
@@ -522,6 +569,7 @@ class Simulation:
                 self.semi_immune_container.add(semi_immune_person)
                 self.all_container.add(semi_immune_person)
                 
+                
             for people in to_recover:
                 recovered_person = people.recover(self, IMMUNE_COL)
                 self.immune_container.add(recovered_person)
@@ -539,15 +587,16 @@ class Simulation:
                         infected_people.fatality(self.cycles_to_death, self.mortality_rate)
                         self.infected_people_container.add(infected_people)
                         self.all_container.add(infected_people)
-                        infected_people.update()
+                        infected_people.update(inner_surface=self.inner_surface)
             
             for i in self.all_container:
                 if isinstance(i, person):
                     if i not in self.dead_container:
                         i.movement()
                 
-
             
+            
+                
             if len(to_recover) > 0:
                 self.infected_mosquito_container.remove(*to_recover)
                 self.all_container.remove(*to_recover)
