@@ -58,7 +58,6 @@ class Malaria(pygame.sprite.Sprite):
 
     def route(self, dest: tuple[int, int], set_home: bool) -> None:
 
-<<<<<<< HEAD
         # Set a home which can be returned to
         if set_home:
             self.home = self.pos
@@ -85,12 +84,8 @@ class Malaria(pygame.sprite.Sprite):
     
     def update(self, inner_surface):
         # Add random displacement within the range [-1, 1]
-=======
-        #Movment model for Humans and Mosquitoes that adjusts the
-        #way they behave whilsts moving around to make it more realistic
->>>>>>> 70d68d7e5ebfb76487a6575782dcdf9c8751d4d4
         displacement = np.random.rand(2) * 2 - 1
-        self.pos += displacement * 1
+        self.pos += displacement * 0.5
 
         if self.inside is not None:
             inside_x, inside_x = self.inside
@@ -197,7 +192,7 @@ class Malaria(pygame.sprite.Sprite):
     def infect_mosquito(self, color):
         self.kill()
         infected_mosquito = person(self.rect.x, self.rect.y, self.WIDTH, self.HEIGHT, color=color, velocity=self.vel, radius = 2)
-        # infected_mosquito = Malaria(x, y, self.WIDTH, self.HEIGHT, color = INFECTED_MOSQUITOES_COL , velocity = vel )
+        # infected_mosquito = mosquito(x, y, self.WIDTH, self.HEIGHT, color = INFECTED_MOSQUITOES_COL , velocity = vel )
         simulation = Simulation.get_instance()
         # Simulation.infected_mosquito_container.add(infected_mosquito)
         simulation.all_container.add(infected_mosquito)
@@ -261,58 +256,8 @@ class person(Malaria, pygame.sprite.Sprite):
             # Add random displacement within the range [-0.5, 0.5]
             displacement = np.random.rand(2) - 0.5
             self.pos += displacement * 2  # adjust the scaling factor to control the amount of displacement
-            
-    
-    def simulate_gathering(self, group, num_people=5, duration=3000):
-        # randomly select a small number of people
-        selected_people = np.random.choice(group.sprites(), num_people, replace=False)
 
-        # set their velocity to 0
-        original_velocities = []
-        for person in selected_people:
-            original_velocities.append(person.vel)
-            person.vel = np.array([0, 0])
-
-        # pre-calculate the step size for all selected people
-        step_sizes = []
-        for person in selected_people:
-            new_x = np.random.randint(80, self.sim_width + 1)
-            new_y = np.random.randint(80, self.sim_height + 1)
-            target_pos = np.array([new_x, new_y])
-            displacement = target_pos - np.array([person.rect.x, person.rect.y])
-            displacement_norm = np.linalg.norm(displacement)
-            step_size = displacement / displacement_norm if displacement_norm > 0 else np.array([0, 0])
-            step_sizes.append(step_size * 4)
-
-        # start the countdown
-        start_time = pygame.time.get_ticks()
-        time_remaining = duration
-
-        # loop until the duration has elapsed
-        while time_remaining > 0:
-            # update the positions of the selected people based on their new velocity
-            for i, person in enumerate(selected_people):
-                person.rect.x += step_sizes[i][0]
-                person.rect.y += step_sizes[i][1]
-
-            # update the remaining time
-            current_time = pygame.time.get_ticks()
-            elapsed_time = current_time - start_time
-            time_remaining = max(duration - elapsed_time, 0)
-
-        # return their velocities back to the original values
-        for i in range(len(selected_people)):
-            selected_people[i].vel = original_velocities[i]
-
-        # # update the display
-        # self.inner_surface.fill(INNER_SURFACE_COL)
-        # group.draw(self.inner_surface)
-
-
-
-
-
-class IncidenceFormulae:
+class MalariaModel:
     def __init__(self, human_population, infected_population, immune_class, transmission_rate, probability_infection, biting_rate, semi_immune_probability):
         self.human_population = human_population
         self.infected_population = infected_population #infected_population
@@ -565,7 +510,7 @@ class Simulation:
             #detects collision between infected mosq and suscpetible person and moves it to the infected container
             collision_group = pygame.sprite.groupcollide(self.susceptible_people_container,self.infected_mosquito_container,False,False)
             
-            malaria = IncidenceFormulae(human_population = len(self.all_container), infected_population = len(self.infected_people_container), immune_class = len(self.immune_container),
+            malaria = MalariaModel(human_population = len(self.all_container), infected_population = len(self.infected_people_container), immune_class = len(self.immune_container),
                                    transmission_rate = 1.2, probability_infection = 0.8, biting_rate = 1.2, semi_immune_probability = 10)
 
             
@@ -597,19 +542,10 @@ class Simulation:
                         self.infected_mosquito_container.add(infected_mosquitoes)
                         self.all_container.add(infected_mosquitoes)
             
-            
-            # Select the first 5 people in the susceptible_people_container group
-            selected_group = pygame.sprite.Group(list(self.susceptible_people_container)[:5])
-            # person_instance = person()
-
-            for i in selected_group:
-                person.simulate_gathering(self, selected_group)
-
-            
-            
             to_remove = []
             to_recover = []
             to_semi_immune = []
+            
             
             for infected_person in self.infected_people_container:
                 if infected_person.recovered:
