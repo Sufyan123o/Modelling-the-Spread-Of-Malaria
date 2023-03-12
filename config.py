@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import END, Text
-import math
+import math 
 import main
 import sys
 
@@ -48,11 +48,11 @@ class Window(tk.Tk):
         self.label_primes = tk.Label(self, text="Prime numbers up to:")
 
         self.scale_mosquito_susceptible = tk.Scale(self, from_=0, to=500, orient=tk.HORIZONTAL)
-        self.scale_mosquito_infected = tk.Scale(self, from_=100, to=500, orient=tk.HORIZONTAL)
+        self.scale_mosquito_infected = tk.Scale(self, from_=0, to=500, orient=tk.HORIZONTAL)
         self.scale_mosquito_male = tk.Scale(self, from_=0, to=500, orient=tk.HORIZONTAL)
         self.scale_people_susceptible = tk.Scale(self, from_=0, to=500, orient=tk.HORIZONTAL)
         self.scale_people_infected = tk.Scale(self, from_=0, to=500, orient=tk.HORIZONTAL)
-        self.scale_semi_immune = tk.Scale(self, from_=100, to=500, orient=tk.HORIZONTAL)
+        self.scale_semi_immune = tk.Scale(self, from_=0, to=500, orient=tk.HORIZONTAL)
         self.scale_mortality_rate = tk.Scale(self, from_=0, to=1, resolution=0.01, orient=tk.HORIZONTAL)
         self.scale_factorial = tk.Scale(self, from_=0, to=100, orient=tk.HORIZONTAL)
         self.scale_fibonacci = tk.Scale(self, from_=0, to=100, orient=tk.HORIZONTAL)
