@@ -100,7 +100,6 @@ class Malaria(pygame.sprite.Sprite):
             if self.cycles_to_death <= 0: #Once at 0 determines whether someone dies or becomes semi immune
                 self.fatality_on = False
                 if self.mortality_rate > random.uniform(0, 1):
-                    print(self.mortality_rate)
                     self.dead = True
                 elif SEMI_IMMUNE_PROBABILITY > random.uniform(0, 1):
                     self.semi_immune = True
@@ -299,13 +298,14 @@ class MalariaModel:
 
 class Graph:
     def __init__(self, graph_width, screen, width, height):
-        """_summary_
-
+        """
+        Initialises a graph and displays it and any changes onto the screen.
+        
         Args:
-            graph_width (int): _description_
-            screen (tuple): _description_
-            width (int): _description_
-            height (int): _description_
+            graph_width (int)
+            screen (tuple): the pygame display which the objects are shown on
+            width (int): the width of the screen
+            height (int): height of the screen
         """ 
         self.font = pygame.font.SysFont(None, 30)
         self.screen = screen
@@ -316,7 +316,7 @@ class Graph:
         self.zoom = 1.0
         self.last_update_time = 0
         
-        # Set up the graph data structure
+        # Sets up the graph data structure
         self.data = {}
         self.data["susceptible"] = [(50, 550)]
         self.data["semi_immune"] = [(50, 550)]
@@ -326,11 +326,23 @@ class Graph:
         self.data["immune"] = [(50, 550)]
         self.data["infected_mosquito"] = [(50, 550)]
         
-        # Set the position of the graph to the bottom right corner of the screen
+        # Sets the position of the graph to the bottom right corner of the screen
         self.position = (screen.get_width() - graph_width, screen.get_height() - 600 - 50)
 
 
     def update(self, susceptible_count, semi_immune_count, infected_count, dead_count, male_count, immune_count, infected_mosquito_count):
+        """_summary_
+
+        Args:
+            susceptible_count (int): population of susceptible people
+            semi_immune_count (int): population of semi_immune people
+            infected_count (int): population of infected people
+            dead_count (int): population of dead people
+            male_count (int): population of male
+            immune_count (int): population of immune people
+            infected_mosquito_count (int): population of infect mosquitos
+        """        
+        
         # Clear the graph surface for the graph display
         self.screen.fill((INNER_SURFACE_COL) , (self.position[0], self.position[1]+50, self.graph_width, 600))
 
@@ -399,14 +411,29 @@ class Graph:
         self.zoom = min(self.zoom + 0.1, 1)
 
     def zoom_out(self):
-        # Decrease the zoom level by 0.1, but don't let it go below 0.1
+        # Decrease the zoom level by 0.1, but doesn't let it go below 0.1
         self.zoom = max(self.zoom - 0.1, 0.1)
 
 class Simulation:
     
-    _instance = None
+    _instance = None #detects if a instance of simulation already exists
 
-    def __init__(self,n_susceptible_mosquito, n_infected_mosquito,n_male_mosquito,n_susceptible_people, n_infected_people,n_semi_immune, mortality_rate, width=1600, height=900, sim_width=800, sim_height=800):
+    def __init__(self,n_susceptible_mosquito, n_infected_mosquito,n_male_mosquito,n_susceptible_people, n_infected_people,n_semi_immune, mortality_rate, width=1600, height=900, sim_width=800, sim_height=800):        
+        """_summary_
+
+        Args:
+            n_susceptible_mosquito (int): number of susceptible mosquitoes
+            n_infected_mosquito (int): number of infected mosuqitoes defined by user
+            n_male_mosquito (int): number of male mosuqitoes defined by user
+            n_susceptible_people (int): number of susceptible people defined by user
+            n_infected_people (int): number of infected people defined by user
+            n_semi_immune (int): number of semi immmune people  defined by user
+            mortality_rate (float): mortalitlty rate defined by user
+            width (int): width of screeen. Defaults to 1600.
+            height (int): height of screen. Defaults to 900.
+            sim_width (int): width of sim that the objects appear on. Defaults to 800.
+            sim_height (int): height of sim that the objects appear on. Defaults to 800.
+        """        
         self.WIDTH = width
         self.HEIGHT = height
         self.sim_height = sim_height
@@ -427,10 +454,8 @@ class Simulation:
         self.text_rect = self.text.get_rect()
         # Center the text in the window
         self.text_rect.center = (self.WIDTH / 2, 30)
-        
         # load the icon image
         icon = pygame.image.load("icon.png")
-
         # set the icon for the game window
         pygame.display.set_icon(icon)
         
@@ -446,9 +471,6 @@ class Simulation:
         self.infected_mosquito_container = pygame.sprite.Group()
         self.all_container = pygame.sprite.Group()
         
-        # config = open("config.py", "r")
-
-        
         #Variables
         self.n_susceptible_mosquito = n_susceptible_mosquito
         self.n_infected_mosquito = n_infected_mosquito
@@ -458,7 +480,6 @@ class Simulation:
         self.n_semi_immune = n_semi_immune
         self.cycles_to_death = 1000
         self.mortality_rate = mortality_rate
-
 
         # Set the instance variable to the current instance
         Simulation._instance = self
