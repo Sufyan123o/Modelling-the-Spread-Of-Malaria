@@ -440,24 +440,26 @@ class Simulation:
         self.sim_width = sim_width
         self.graph_width = self.WIDTH - self.sim_width - 100
         
-        
+        self.text_file = False
         self.inner_surface = pygame.Surface((sim_width, sim_height))
         
-        pygame.font.init()
-        
-        font_file = "Anurati-Regular.otf"
-        
-        font = pygame.font.Font(font_file, 50)
-        # Render the text
-        self.text = font.render("M O D E L L I N G  M A L A R I A", True, (255, 255, 255))
-        # Get the rectangle of the text
-        self.text_rect = self.text.get_rect()
-        # Center the text in the window
-        self.text_rect.center = (self.WIDTH / 2, 30)
-        # load the icon image
-        icon = pygame.image.load("icon.png")
-        # set the icon for the game window
-        pygame.display.set_icon(icon)
+        try:
+            pygame.font.init()
+
+            font_file = "Anurati-Regular.otf"
+            font = pygame.font.Font(font_file, 50)
+            self.text = font.render("M O D E L L I N G  M A L A R I A", True, (255, 255, 255))
+            self.text_rect = self.text.get_rect()
+            self.text_rect.center = (self.WIDTH / 2, 30)
+            self.text_file = True
+        except FileNotFoundError:
+            print("Font file not found.")
+
+        try:
+            icon = pygame.image.load("icon.png")
+            pygame.display.set_icon(icon)
+        except FileNotFoundError:
+            print("Icon File Not Found")
         
         #A container class to hold and manage multiple Sprite objects in this case to manage each category of person and mosquito
         #pygame.sprite.Group objects act as a hashmap to all objects in the group
@@ -667,14 +669,9 @@ class Simulation:
             # Blit text surfaces onto screen surface
             for i, text_surface in enumerate(text_surfaces):
                 screen.blit(text_surface, (self.sim_width + 100, self.HEIGHT - self.sim_height + 160 - i*30))
-            screen.blit(self.text, self.text_rect)
             
-
-            
-            # draw the simulation and the real-time graph on the same Pygame window
-            frame_rate = "Frame Rate: " + str(int(clock.get_fps()))
-            frame_rate_surface = font.render(frame_rate, True, (255, 255, 255))
-            screen.blit(frame_rate_surface, (10, 10))
+            if self.text_file == True:
+                screen.blit(self.text, self.text_rect)
             
             # Draw all Objects on the Screen
             self.all_container.draw(screen)
