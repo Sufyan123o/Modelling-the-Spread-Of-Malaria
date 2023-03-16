@@ -42,13 +42,6 @@ class Malaria(pygame.sprite.Sprite):
         self.x = x
         self.y = y
         
-        self.selected = False
-
-        # Add destination_x and destination_y attributes
-        
-        self.destination_x = destination_x
-        self.destination_y = destination_y
-        
         self.fatality_on = False
         self.recovered = False
         self.dead = False
@@ -322,24 +315,6 @@ class Graph:
             self.tail = new_node
         self.length += 1
 
-    def pop_head(self):
-        if self.head is not None:
-            self.head = self.head.next
-            self.length -= 1
-            
-    def pop_tail(self):
-        if self.head is not None:
-            if self.head == self.tail:
-                self.head = None
-                self.tail = None
-            else:
-                current_node = self.head
-                while current_node.next is not None and current_node.next.next is not None:
-                    current_node = current_node.next
-                self.tail = current_node
-                current_node.next = None
-            # self.length -= 1
-
 class LineGraph:
     def __init__(self, graph_width, screen, width, height):
         """
@@ -358,21 +333,8 @@ class LineGraph:
         self.graph_width = graph_width
         self.data_max_length = graph_width // 6
         self.zoom = 1.0
-        self.last_update_time = 0
         self.graph = Graph()
         self.scroll = 0
-        
-        # Set graph boundaries
-        self.x_min = 0
-        self.x_max = self.data_max_length
-        self.y_min = 50
-        self.y_max = 550
-
-        # Initialize scrollbar attributes
-        self.scrollbar_width = 15
-        self.scrollbar_color = (200, 200, 200)
-        self.scrollbar_position = 0
-        self.scrollbar_max_position = 0
         
         # Sets up the graph data structure
         self.data = {}
@@ -384,7 +346,7 @@ class LineGraph:
         self.data["immune"] = [(50, 550)]
         self.data["infected_mosquito"] = [(50, 550)]
         
-        # Sets the position of the graph to the bottom right corner of the screen
+        # Sets the position of the graph
         extra_padding = 530
         self.position = (screen.get_width() - graph_width + extra_padding, screen.get_height() - 600 - 50)
         
@@ -456,10 +418,6 @@ class LineGraph:
 
             current_node = next_node
 
-    def scroll_left(self):
-        # Scroll the graph to the left
-        self.scroll = max(self.scroll - 1, 0)
-
     def scroll_right(self):
         # Scroll the graph to the right
         if self.graph.length - self.scroll > self.data_max_length:
@@ -467,7 +425,7 @@ class LineGraph:
     
     def zoom_in(self):
         # Increase the zoom level by 0.1
-        self.zoom = min(self.zoom + 0.1, 1)
+        self.zoom = min(self.zoom + 0.1, 2)
 
     def zoom_out(self):
         # Decrease the zoom level by 0.1, but doesn't let it go below 0.1
@@ -608,10 +566,6 @@ class Simulation:
                         self.graph.zoom_in()
                     elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
                         self.graph.zoom_out()
-                    elif event.key == pygame.K_RIGHT:
-                        self.graph.scroll_right()
-                    elif event.key == pygame.K_LEFT:
-                        self.graph.scroll_left()
 
             screen.fill(BACKGROUND_COL)
 
