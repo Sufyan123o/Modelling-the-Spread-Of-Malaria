@@ -5,17 +5,17 @@ import pygame.math
 import pygame.font
 
 #Constant colours to identify objects on screen 
-SUSCEPTIBLE_PEOPLE_COL = (211,211,211)
-SEMI_IMMUNE_COL = (255,192,203) #pink
-INFECTED_PEOPLE_COL = (0, 255, 0) #infected people
-DEAD_COL = (56, 26, 20) #black
-IMMUNE_COL = (255, 165, 0) 
-MALE_MOSQUITO_COL = (0, 100, 255) #BLUE
-SUSCEPTIBLE_MOSQUITO_COL   = (50, 150, 50) #GREEN
-INFECTED_MOSQUITOES_COL  = (255,0,0) #red
-BACKGROUND_COL  = (25, 25, 34)  #Blue/grey
-INNER_SURFACE_COL  = (33,33,45) #grey
-CURRENT_SIMULATION  = None
+SUSCEPTIBLE_PEOPLE_COL = (211,211,211) #Off White
+SEMI_IMMUNE_COL = (255,192,203) #Light Pink
+INFECTED_PEOPLE_COL = (0, 255, 0) #Light Green
+DEAD_COL = (56, 26, 20) #Brown
+IMMUNE_COL = (255, 165, 0) #Yellow
+MALE_MOSQUITO_COL = (0, 100, 255) #Blue
+SUSCEPTIBLE_MOSQUITO_COL   = (50, 150, 50) #dark green
+INFECTED_MOSQUITOES_COL  = (255,0,0) #Red
+BACKGROUND_COL  = (25, 25, 34) #Darkish Blue/Grey
+INNER_SURFACE_COL  = (33,33,45) #Blue/Grey, slightly lighter than background
+CURRENT_SIMULATION  = None #Flag to detect if an Instance of Simulation is running
 
 
 
@@ -24,15 +24,15 @@ class Malaria(pygame.sprite.Sprite):
     Manages the creation and behaviour of objects affected by Malaria in the simulation
     
         Args:
-            x (float): _description_
-            y (float): _description_
-            width (int): _description_
-            height (inr): _description_
-            color (tuple, RGB): _description_. Defaults to DEAD_COL.
-            radius (int): _description_. Defaults to 2.
-            velocity (vector): _description_. Defaults to [0, 0].
+            x (float): x position
+            y (float): y position_
+            width (int): width of screen
+            height (inr): height of screen
+            color (tuple, RGB): colour of object. Defaults to DEAD_COL.
+            radius (int): radius of the object on screen. Defaults to 2.
+            velocity (vector): Velocity at which the objects move. Defaults to [0, 0].
         """        
-    def __init__(self, x, y, width, height, color=DEAD_COL, radius=2, velocity=[0, 0], destination_x = 0, destination_y = 0):
+    def __init__(self, x, y, width, height, color=DEAD_COL, radius=2, velocity=[0, 0]):
         
         super().__init__()
         # Creates Mosquitoes
@@ -156,7 +156,7 @@ class Malaria(pygame.sprite.Sprite):
         Triggers the start of the death, semi immunity, recovery for infected peoeple
         
         Args:
-            cycles_to_death (int): _description_. Defaults to random integer between 500 to 5000
+            cycles_to_death (int): Count down till death, recoery or semi immunity. Defaults to random integer between 500 to 5000
             mortality_rate (int): Rate of which people die when cycles_to_death hits 0. Defaults to 0.
                                 Can be altered using GUI.
         """
@@ -295,11 +295,11 @@ class MalariaModel:
 
 class Node:
     def __init__(self, time_step, population_data):
-        self.time_step = time_step
+        self.time_step = time_step #increments each call in LineGraph.update()
         self.population_data = population_data
         self.next = None
 
-class Graph:
+class LinkedList:
     def __init__(self):
         self.head = None
         self.tail = None
@@ -333,10 +333,10 @@ class LineGraph:
         self.graph_width = graph_width
         self.data_max_length = graph_width // 6
         self.zoom = 1.0
-        self.graph = Graph()
+        self.linkedlist = LinkedList()
         self.scroll = 0
         
-        # Sets up the graph data structure
+        # Sets up the LinkedList data structure
         self.data = {}
         self.data["susceptible"] = [(50, 550)]
         self.data["semi_immune"] = [(50, 550)]
@@ -386,14 +386,14 @@ class LineGraph:
         self.draw_axes()
         
         # Update the graph data structure for each group
-        self.graph.append(self.graph.length, new_data)
+        self.linkedlist.append(self.linkedlist.length, new_data)
         
         #move the graph to prevent it going off the screen
-        if self.graph.length > self.data_max_length:
+        if self.linkedlist.length > self.data_max_length:
             self.scroll_right()
 
         # Draw the graph for each group
-        current_node = self.graph.head
+        current_node = self.linkedlist.head
         while current_node is not None and current_node.next is not None:
             next_node = current_node.next
 
@@ -420,7 +420,7 @@ class LineGraph:
 
     def scroll_right(self):
         # Scroll the graph to the right
-        if self.graph.length - self.scroll > self.data_max_length:
+        if self.linkedlist.length - self.scroll > self.data_max_length:
             self.scroll += 1
     
     def zoom_in(self):
